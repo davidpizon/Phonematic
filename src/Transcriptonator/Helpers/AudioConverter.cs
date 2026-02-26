@@ -1,4 +1,5 @@
 using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 
 namespace Transcriptonator.Helpers;
 
@@ -6,6 +7,7 @@ public static class AudioConverter
 {
     /// <summary>
     /// Converts an MP3 file to a 16kHz mono WAV file suitable for Whisper.
+    /// Uses cross-platform WDL resampler (works on Windows, Linux, macOS).
     /// Returns the path to the temporary WAV file.
     /// </summary>
     public static async Task<string> ConvertMp3ToWavAsync(string mp3Path, CancellationToken ct = default)
@@ -15,10 +17,24 @@ public static class AudioConverter
         await Task.Run(() =>
         {
             using var reader = new Mp3FileReader(mp3Path);
-            var targetFormat = new WaveFormat(16000, 16, 1);
-            using var resampler = new MediaFoundationResampler(reader, targetFormat);
-            resampler.ResamplerQuality = 60;
-            WaveFileWriter.CreateWaveFile(wavPath, resampler);
+
+            // Convert to sample provider for cross-platform resampling
+            ISampleProvider sampleProvider = reader.ToSampleProvider();
+
+            // Convert to mono if stereo
+            if (sampleProvider.WaveFormat.Channels > 1)
+            {
+                sampleProvider = new StereoToMonoSampleProvider(sampleProvider);
+            }
+
+            // Resample to 16kHz using WDL resampler (cross-platform, no MediaFoundation)
+            if (sampleProvider.WaveFormat.SampleRate != 16000)
+            {
+                sampleProvider = new WdlResamplingSampleProvider(sampleProvider, 16000);
+            }
+
+            // Write as 16-bit PCM WAV
+            WaveFileWriter.CreateWaveFile16(wavPath, sampleProvider);
         }, ct);
 
         return wavPath;
