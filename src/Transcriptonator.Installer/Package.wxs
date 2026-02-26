@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="Transcriptonator"
+           Manufacturer="Transcriptonator"
+           Version="1.0.0.0"
+           UpgradeCode="6B29FC40-CA47-1067-B31D-00DD010662DA">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Feature Id="Main" Title="Transcriptonator" Level="1">
+      <ComponentGroupRef Id="PublishOutput" />
+      <ComponentRef Id="ApplicationShortcut" />
+    </Feature>
+  </Package>
+</Wix>

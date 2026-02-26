@@ -1,0 +1,33 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Transcriptonator.ViewModels"
+        xmlns:views="using:Transcriptonator.Views"
+        x:Class="Transcriptonator.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Transcriptonator"
+        Width="1200" Height="800"
+        MinWidth="900" MinHeight="600">
+
+    <Panel>
+        <!-- Setup View (shown when models need downloading) -->
+        <views:SetupView DataContext="{Binding Setup}"
+                         IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsSetupRequired}" />
+
+        <!-- Main TabControl (hidden during setup) -->
+        <TabControl SelectedIndex="{Binding SelectedTabIndex}"
+                    IsVisible="{Binding !IsSetupRequired}">
+            <TabItem Header="Transcribe">
+                <views:TranscribeView DataContext="{Binding Transcribe}" />
+            </TabItem>
+            <TabItem Header="Transcriptions">
+                <views:TranscriptionsView DataContext="{Binding Transcriptions}" />
+            </TabItem>
+            <TabItem Header="Search">
+                <views:SearchView DataContext="{Binding Search}" />
+            </TabItem>
+            <TabItem Header="Settings">
+                <views:SettingsView DataContext="{Binding Settings}" />
+            </TabItem>
+        </TabControl>
+    </Panel>
+</Window>

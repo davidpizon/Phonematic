@@ -1,0 +1,71 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Transcriptonator.ViewModels"
+             x:Class="Transcriptonator.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+
+    <ScrollViewer>
+        <StackPanel Margin="16" Spacing="16" MaxWidth="600">
+            <TextBlock Text="Settings" FontSize="20" FontWeight="Bold" />
+
+            <!-- Output Directory -->
+            <StackPanel Spacing="4">
+                <TextBlock Text="Output Directory" FontWeight="SemiBold" />
+                <DockPanel>
+                    <Button Content="Browse" Command="{Binding BrowseOutputDirectoryCommand}"
+                            DockPanel.Dock="Right" Margin="4,0,0,0" />
+                    <TextBox Text="{Binding OutputDirectory}" />
+                </DockPanel>
+            </StackPanel>
+
+            <!-- Whisper Model Size -->
+            <StackPanel Spacing="4">
+                <TextBlock Text="Whisper Model Size" FontWeight="SemiBold" />
+                <ComboBox ItemsSource="{Binding WhisperModelSizes}"
+                          SelectedItem="{Binding SelectedWhisperModel}"
+                          HorizontalAlignment="Stretch" />
+            </StackPanel>
+
+            <!-- Thread Count -->
+            <StackPanel Spacing="4">
+                <DockPanel>
+                    <TextBlock Text="Thread Count" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding ThreadCount}" HorizontalAlignment="Right" />
+                </DockPanel>
+                <Slider Value="{Binding ThreadCount}"
+                        Minimum="1"
+                        Maximum="{Binding MaxThreads}"
+                        TickFrequency="1"
+                        IsSnapToTickEnabled="True" />
+            </StackPanel>
+
+            <!-- Config Directory -->
+            <StackPanel Spacing="4">
+                <TextBlock Text="Config Directory" FontWeight="SemiBold" />
+                <TextBox Text="{Binding ConfigDirectoryPath}" IsReadOnly="True" />
+            </StackPanel>
+
+            <!-- Model Status -->
+            <StackPanel Spacing="4">
+                <TextBlock Text="Model Status" FontWeight="SemiBold" FontSize="16" />
+                <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto, Auto" Margin="0,4">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Whisper Model" />
+                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding WhisperModelStatus}" />
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Embedding Model (ONNX)" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding OnnxModelStatus}" />
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="LLM (Phi-3)" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding LlmModelStatus}" />
+                </Grid>
+            </StackPanel>
+
+            <!-- Save -->
+            <DockPanel>
+                <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="Green" />
+                <Button Content="Save" Command="{Binding SaveCommand}"
+                        HorizontalAlignment="Right" />
+            </DockPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

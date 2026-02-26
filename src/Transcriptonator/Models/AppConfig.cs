@@ -1,0 +1,14 @@
+namespace Transcriptonator.Models;
+
+public class AppConfig
+{
+    public string OutputDirectory { get; set; } = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+        "Transcriptonator");
+
+    public string WhisperModelSize { get; set; } = "small";
+    public int ThreadCount { get; set; } = Math.Max(1, Environment.ProcessorCount / 2);
+    public int ChunkSize { get; set; } = 500;
+    public int ChunkOverlap { get; set; } = 100;
+    public int RagTopK { get; set; } = 5;
+}

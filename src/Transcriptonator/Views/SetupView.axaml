@@ -1,0 +1,53 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Transcriptonator.ViewModels"
+             x:Class="Transcriptonator.Views.SetupView"
+             x:DataType="vm:SetupViewModel">
+
+    <Border Padding="40" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="600">
+        <StackPanel Spacing="24">
+            <TextBlock Text="Transcriptonator Setup"
+                       FontSize="28" FontWeight="Bold"
+                       HorizontalAlignment="Center" />
+
+            <TextBlock Text="Downloading required models. This only happens once."
+                       HorizontalAlignment="Center"
+                       Foreground="Gray" />
+
+            <!-- Whisper Model -->
+            <StackPanel Spacing="4">
+                <DockPanel>
+                    <TextBlock Text="Whisper Speech-to-Text Model" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding WhisperStatus}" HorizontalAlignment="Right" />
+                </DockPanel>
+                <ProgressBar Value="{Binding WhisperProgress}"
+                             Minimum="0" Maximum="1" Height="20" />
+            </StackPanel>
+
+            <!-- ONNX Embedding Model -->
+            <StackPanel Spacing="4">
+                <DockPanel>
+                    <TextBlock Text="Embedding Model (all-MiniLM-L6-v2)" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding OnnxStatus}" HorizontalAlignment="Right" />
+                </DockPanel>
+                <ProgressBar Value="{Binding OnnxProgress}"
+                             Minimum="0" Maximum="1" Height="20" />
+            </StackPanel>
+
+            <!-- LLM Model -->
+            <StackPanel Spacing="4">
+                <DockPanel>
+                    <TextBlock Text="LLM (Phi-3 Mini)" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding LlmStatus}" HorizontalAlignment="Right" />
+                </DockPanel>
+                <ProgressBar Value="{Binding LlmProgress}"
+                             Minimum="0" Maximum="1" Height="20" />
+            </StackPanel>
+
+            <!-- Status -->
+            <TextBlock Text="{Binding StatusText}"
+                       HorizontalAlignment="Center"
+                       FontSize="14" />
+        </StackPanel>
+    </Border>
+</UserControl>
