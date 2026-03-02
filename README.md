@@ -76,14 +76,14 @@ It's not rocket science. It's audio science.
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                    Transcriptonator                  │
+│                    Transcriptonator                 │
 ├──────────────┬──────────────┬───────────────────────┤
 │   Avalonia   │   Whisper    │      LLamaSharp       │
 │     UI       │    .NET      │    (Local LLM)        │
 ├──────────────┴──────────────┴───────────────────────┤
-│                 SQLite Database                      │
+│                 SQLite Database                     │
 ├─────────────────────────────────────────────────────┤
-│              Your Local File System                  │
+│              Your Local File System                 │
 │         (Where your data stays. Forever.)           │
 └─────────────────────────────────────────────────────┘
 ```
