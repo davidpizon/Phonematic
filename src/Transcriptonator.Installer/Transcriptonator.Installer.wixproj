@@ -1,16 +1,10 @@
 <Project Sdk="WixToolset.Sdk/6.0.0">
   <PropertyGroup>
     <OutputType>Package</OutputType>
+    <HarvestFilesPublishedProjectOutputGroupOutput>true</HarvestFilesPublishedProjectOutputGroupOutput>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Transcriptonator\Transcriptonator.csproj">
-      <Publish>true</Publish>
-    </ProjectReference>
-    <HarvestDirectory Include="!(bindpath.Transcriptonator)">
-      <ComponentGroupName>PublishOutput</ComponentGroupName>
-      <DirectoryRefId>INSTALLFOLDER</DirectoryRefId>
-      <SuppressRootDirectory>true</SuppressRootDirectory>
-    </HarvestDirectory>
+    <ProjectReference Include="..\Transcriptonator\Transcriptonator.csproj" />
   </ItemGroup>
 </Project>
