@@ -8,15 +8,15 @@
 
 Congratulations on your selection of Transcriptonator, a revolutionary audio-to-text conversion system that leverages cutting-edge artificial intelligence to transform your spoken word into searchable, indexable text assets.
 
-Unlike our competitors' solutions—which we are contractually obligated not to name but rhyme with "Schmotter" and "Schmamazon"—Transcriptonator runs entirely on your local hardware. Your audio files never leave your premises. Your IT security team can finally sleep at night.
+Unlike our competitors' solutions-which we are contractually obligated not to name but rhyme with "Schmotter" and "Schmamazon"-Transcriptonator runs entirely on your local hardware. Your audio files never leave your premises. Your IT security team can finally sleep at night.
 
 ## Features
 
-- **Audio Transcription** — Converts audio files to text using Whisper AI. Yes, it actually works.
-- **AI-Powered Search** — Query your transcriptions using natural language. Ask questions. Get answers. Revolutionary.
-- **Local Processing** — All processing occurs on your machine. No cloud. No subscriptions. No "we updated our privacy policy" emails.
-- **Cross-Platform** — Runs on Windows, Linux, and macOS. We believe in equality of suffering.
-- **SQLite Database** — Your transcriptions stored locally in a format that will outlive most startups.
+- **Audio Transcription** - Converts audio files to text using Whisper AI. Yes, it actually works.
+- **AI-Powered Search** - Query your transcriptions using natural language. Ask questions. Get answers. Revolutionary.
+- **Local Processing** - All processing occurs on your machine. No cloud. No subscriptions. No "we updated our privacy policy" emails.
+- **Cross-Platform** - Runs on Windows, Linux, and macOS. We believe in equality of suffering.
+- **SQLite Database** - Your transcriptions stored locally in a format that will outlive most startups.
 
 ## System Requirements
 
@@ -115,10 +115,10 @@ Pull requests are welcome. Please ensure your code:
 
 ## License
 
-This software is provided as-is. We make no warranties, express or implied. If it breaks, you get to keep both pieces.
+MIT License. Use it, modify it, sell it, tattoo it on your forearm. We don't care. See [LICENSE](LICENSE) for the legal boilerplate.
 
 ---
 
 *Transcriptonator: Because your audio files aren't going to transcribe themselves.*
 
-*© 2026 — Built with caffeine and mass quantities of reasonable expectations*
+*Built with caffeine and mass quantities of reasonable expectations*
