@@ -4,6 +4,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Transcriptonator\Transcriptonator.csproj" />
+    <ProjectReference Include="..\Transcriptonator\Transcriptonator.csproj">
+      <Publish>true</Publish>
+    </ProjectReference>
   </ItemGroup>
 </Project>
