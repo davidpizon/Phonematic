@@ -46,6 +46,7 @@ public partial class App : Application
                 mainVm.Transcriptions = Services.GetRequiredService<TranscriptionsViewModel>();
                 mainVm.Search = Services.GetRequiredService<SearchViewModel>();
                 mainVm.Settings = Services.GetRequiredService<SettingsViewModel>();
+                mainVm.PlaudSync = Services.GetRequiredService<PlaudSyncViewModel>();
 
                 // Check if setup is needed
                 if (!modelManager.AreAllModelsReady(config.WhisperModelSize))
@@ -103,11 +104,16 @@ public partial class App : Application
         services.AddSingleton<IVectorSearchService, VectorSearchService>();
         services.AddSingleton<ILlmService, LlmService>();
 
+        // PLAUD sync
+        services.AddSingleton<IPlaudApiService, PlaudApiService>();
+        services.AddSingleton<TokenListenerService>();
+
         // ViewModels
         services.AddSingleton<MainWindowViewModel>();
         services.AddTransient<TranscribeViewModel>();
         services.AddTransient<TranscriptionsViewModel>();
         services.AddTransient<SearchViewModel>();
         services.AddTransient<SettingsViewModel>();
+        services.AddTransient<PlaudSyncViewModel>();
     }
 }

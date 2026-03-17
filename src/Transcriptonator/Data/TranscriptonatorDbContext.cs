@@ -7,6 +7,7 @@ public class TranscriptonatorDbContext : DbContext
 {
     public DbSet<ProcessedFile> ProcessedFiles => Set<ProcessedFile>();
     public DbSet<TranscriptionChunk> TranscriptionChunks => Set<TranscriptionChunk>();
+    public DbSet<PlaudRecording> PlaudRecordings => Set<PlaudRecording>();
 
     private readonly string _dbPath;
 
@@ -53,6 +54,12 @@ public class TranscriptonatorDbContext : DbContext
                   .WithMany(p => p.Chunks)
                   .HasForeignKey(e => e.ProcessedFileId)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PlaudRecording>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.PlaudFileId).IsUnique();
         });
     }
 }

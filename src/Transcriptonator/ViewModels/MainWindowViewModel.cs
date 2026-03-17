@@ -17,5 +17,6 @@ public partial class MainWindowViewModel : ViewModelBase
     public TranscriptionsViewModel? Transcriptions { get; set; }
     public SearchViewModel? Search { get; set; }
     public SettingsViewModel? Settings { get; set; }
+    public PlaudSyncViewModel? PlaudSync { get; set; }
     public SetupViewModel? Setup { get; set; }
 }

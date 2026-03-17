@@ -26,6 +26,9 @@
             <TabItem Header="AI Search">
                 <views:SearchView DataContext="{Binding Search}" />
             </TabItem>
+            <TabItem Header="PLAUD Sync">
+                <views:PlaudSyncView DataContext="{Binding PlaudSync}" />
+            </TabItem>
             <TabItem Header="Settings">
                 <views:SettingsView DataContext="{Binding Settings}" />
             </TabItem>
