@@ -7,6 +7,7 @@ namespace Transcriptonator.Services;
 public class PlaudApiService : IPlaudApiService
 {
     private readonly HttpClient _httpClient;
+    private readonly HttpClient _downloadClient;
     private string _baseUrl = "https://api.plaud.ai";
     private const int MaxRetryAttempts = 3;
 
@@ -18,6 +19,11 @@ public class PlaudApiService : IPlaudApiService
         _httpClient.Timeout = TimeSpan.FromMinutes(30);
         _httpClient.DefaultRequestHeaders.Add("App-Platform", "web");
         _httpClient.DefaultRequestHeaders.Add("Edit-From", "web");
+
+        // Separate client for downloading files — presigned cloud storage URLs
+        // reject requests that carry extra Authorization or custom headers.
+        _downloadClient = new HttpClient();
+        _downloadClient.Timeout = TimeSpan.FromMinutes(30);
     }
 
     public void SetAuthToken(string token)
@@ -126,7 +132,7 @@ public class PlaudApiService : IPlaudApiService
             var tempPath = destPath + ".tmp";
             try
             {
-                using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
+                using var response = await _downloadClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
                 response.EnsureSuccessStatusCode();
 
                 var totalBytes = response.Content.Headers.ContentLength ?? -1;
