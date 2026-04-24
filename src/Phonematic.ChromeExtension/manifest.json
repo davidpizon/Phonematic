@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Phonematic - PLAUD Token Helper",
+  "version": "1.0.0",
+  "description": "Sends your PLAUD login token to the Phonematic app automatically.",
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": ["https://web.plaud.ai/*"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "48": "icon48.png"
+    }
+  },
+  "icons": {
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}

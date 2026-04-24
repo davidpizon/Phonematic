@@ -65,7 +65,6 @@ launchSettings.json
 *.bin
 *.gguf
 *.onnx
-models/
 
 ## SQLite databases
 *.db

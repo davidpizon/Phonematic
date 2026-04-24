@@ -1,0 +1,99 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Phonematic.ViewModels"
+             x:Class="Phonematic.Views.SearchView"
+             x:DataType="vm:SearchViewModel">
+
+    <DockPanel Margin="16">
+        <TextBlock DockPanel.Dock="Top" Text="AI Search" FontSize="20" FontWeight="Bold"
+                   Margin="0,0,0,8" />
+
+        <!-- Search bar -->
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4">
+                <Button Content="Search" Command="{Binding SearchCommand}"
+                        IsEnabled="{Binding !IsSearching}" />
+                <Button Content="Cancel" Command="{Binding SearchCancelCommand}"
+                        IsEnabled="{Binding IsSearching}" />
+            </StackPanel>
+            <TextBox Text="{Binding QueryText}"
+                     Watermark="Ask a question about your transcriptions..."
+                     Margin="0,0,8,0" />
+        </DockPanel>
+
+        <TextBlock DockPanel.Dock="Top" Text="{Binding StatusText}"
+                   Foreground="Gray" Margin="0,0,0,8" />
+
+        <!-- Loading indicator -->
+        <StackPanel DockPanel.Dock="Top"
+                    IsVisible="{Binding IsLoadingLlm}"
+                    Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+            <ProgressBar IsIndeterminate="True" Width="200" Height="16" />
+            <TextBlock Text="Loading LLM..." VerticalAlignment="Center" />
+        </StackPanel>
+
+        <!-- Main content: three columns -->
+        <Grid ColumnDefinitions="300,8,*,8,350" RowDefinitions="*">
+
+            <!-- Left: Search results list -->
+            <DockPanel Grid.Column="0">
+                <TextBlock DockPanel.Dock="Top" Text="Results" FontWeight="SemiBold"
+                           Margin="0,0,0,4" />
+                <ListBox ItemsSource="{Binding SearchResults}"
+                         SelectedItem="{Binding SelectedResult}"
+                         BorderBrush="Gray" BorderThickness="1">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="4" Spacing="2">
+                                <DockPanel>
+                                    <TextBlock Text="{Binding FileName}" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding SimilarityDisplay}"
+                                               HorizontalAlignment="Right"
+                                               Foreground="Green" FontWeight="SemiBold" />
+                                </DockPanel>
+                                <TextBlock Text="{Binding SourceFilePath}"
+                                           FontSize="10" Foreground="Gray"
+                                           TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding TextPreview}"
+                                           TextWrapping="Wrap"
+                                           FontSize="11" Foreground="Gray"
+                                           MaxLines="3"
+                                           Margin="0,2,0,0" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+            <GridSplitter Grid.Column="1" ResizeDirection="Columns" />
+
+            <!-- Center: Source transcription from the exact file -->
+            <DockPanel Grid.Column="2">
+                <TextBlock DockPanel.Dock="Top" Text="Source Transcription" FontWeight="SemiBold"
+                           Margin="0,0,0,4" />
+                <TextBlock DockPanel.Dock="Top" Text="{Binding SourceHeaderText}"
+                           FontSize="11" Foreground="Gray"
+                           TextTrimming="CharacterEllipsis"
+                           Margin="0,0,0,4" />
+                <TextBox Text="{Binding SourceTranscriptionText}"
+                         IsReadOnly="True"
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         BorderBrush="Gray" BorderThickness="1" />
+            </DockPanel>
+
+            <GridSplitter Grid.Column="3" ResizeDirection="Columns" />
+
+            <!-- Right: LLM Answer -->
+            <DockPanel Grid.Column="4">
+                <TextBlock DockPanel.Dock="Top" Text="AI Answer" FontWeight="SemiBold"
+                           Margin="0,0,0,4" />
+                <TextBox Text="{Binding LlmAnswer}"
+                         IsReadOnly="True"
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         BorderBrush="Gray" BorderThickness="1" />
+            </DockPanel>
+        </Grid>
+    </DockPanel>
+</UserControl>

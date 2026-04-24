@@ -1,0 +1,159 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Phonematic.ViewModels"
+             x:Class="Phonematic.Views.PlaudSyncView"
+             x:DataType="vm:PlaudSyncViewModel">
+
+    <DockPanel Margin="16">
+        <!-- Top: Login + toolbar -->
+        <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,8">
+
+            <!-- Token panel (hidden once logged in) -->
+            <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="4"
+                    Padding="12" IsVisible="{Binding !IsLoggedIn}">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="PLAUD Token" FontWeight="Bold" FontSize="14" />
+
+                    <!-- Browser extension -->
+                    <TextBlock FontSize="12" FontWeight="SemiBold" Text="Sign in with Google (recommended):" />
+
+                    <StackPanel Spacing="6" IsVisible="{Binding !IsExtensionInstalled}">
+                        <TextBlock FontSize="11" TextWrapping="Wrap"
+                                   Text="One-time setup — install the browser helper extension:" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="Step 1: Copy URL"
+                                    Command="{Binding CopyExtensionsUrlCommand}" />
+                            <TextBlock VerticalAlignment="Center" FontSize="11"
+                                       Text="Paste in Chrome address bar, enable 'Developer mode' (top-right)" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="Step 2: Copy Folder Path"
+                                    Command="{Binding CopyExtensionPathCommand}" />
+                            <TextBlock VerticalAlignment="Center" FontSize="11"
+                                       Text="Click 'Load unpacked' in Chrome, paste path in location bar, click Open" />
+                        </StackPanel>
+                        <Button Content="Done — Extension Installed"
+                                Command="{Binding ExtensionInstallDoneCommand}"
+                                HorizontalAlignment="Left" />
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsExtensionInstalled}">
+                        <Button Content="Open PLAUD Login"
+                                Command="{Binding OpenBrowserCommand}" />
+                        <TextBlock VerticalAlignment="Center" FontSize="11" Foreground="Gray"
+                                   Text="Log in with Google, then click the Phonematic extension icon." />
+                        <Button Content="Uninstall Extension" FontSize="11"
+                                Command="{Binding UninstallExtensionCommand}" />
+                    </StackPanel>
+
+                    <Separator Margin="0,2" />
+
+                    <!-- Manual token paste -->
+                    <TextBlock FontSize="12" FontWeight="SemiBold" Text="Or paste token manually:" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBox Text="{Binding ManualToken}"
+                                 Watermark="Paste token here"
+                                 Width="400" FontSize="11" />
+                        <Button Content="Use Token"
+                                Command="{Binding UseManualTokenCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Logged-in status bar -->
+            <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="4"
+                    Padding="8,6" IsVisible="{Binding IsLoggedIn}">
+                <DockPanel>
+                    <Button Content="Log Out" Command="{Binding LogoutCommand}"
+                            DockPanel.Dock="Right" Padding="12,4" />
+                    <TextBlock Text="Token active" VerticalAlignment="Center" Foreground="Green" FontWeight="SemiBold" />
+                </DockPanel>
+            </Border>
+
+            <!-- Toolbar -->
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <Button Content="Sync Recordings"
+                        Command="{Binding SyncCommand}"
+                        IsEnabled="{Binding !IsSyncing}" />
+                <Button Content="Download All"
+                        Command="{Binding DownloadAllCommand}"
+                        IsEnabled="{Binding !IsDownloading}" />
+                <Button Content="Cancel"
+                        Command="{Binding CancelCommand}"
+                        IsEnabled="{Binding IsDownloading}" />
+                <TextBlock Text="Concurrent:" VerticalAlignment="Center" />
+                <NumericUpDown Value="{Binding MaxConcurrentDownloads}"
+                               Minimum="1" Maximum="10"
+                               Width="80" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" />
+                <TextBlock VerticalAlignment="Center">
+                    <TextBlock.Text>
+                        <MultiBinding StringFormat="Total: {0}  |  Downloaded: {1}  |  Pending: {2}  |  Failed: {3}">
+                            <Binding Path="TotalCount" />
+                            <Binding Path="DownloadedCount" />
+                            <Binding Path="PendingCount" />
+                            <Binding Path="FailedCount" />
+                        </MultiBinding>
+                    </TextBlock.Text>
+                </TextBlock>
+            </StackPanel>
+
+            <ProgressBar Value="{Binding OverallProgress}"
+                         Maximum="1"
+                         Height="6"
+                         IsVisible="{Binding IsDownloading}" />
+        </StackPanel>
+
+        <!-- Bottom: Debug log -->
+        <Border DockPanel.Dock="Bottom" BorderBrush="Gray" BorderThickness="1"
+                Height="120" Margin="0,8,0,0">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Text="Debug Log" FontWeight="Bold"
+                           Margin="4,2" FontSize="11" />
+                <ScrollViewer x:Name="DebugScroller">
+                    <TextBlock x:Name="DebugLog"
+                               Text="{Binding DebugLogText}"
+                               FontFamily="Consolas,Courier New,monospace"
+                               FontSize="11"
+                               TextWrapping="Wrap"
+                               Margin="4" />
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+
+        <!-- Recordings DataGrid -->
+        <DataGrid ItemsSource="{Binding Recordings}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  IsVisible="{Binding HasRecordings}"
+                  CanUserSortColumns="True"
+                  CanUserResizeColumns="True"
+                  GridLinesVisibility="Horizontal"
+                  MinHeight="150">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="*" />
+                <DataGridTextColumn Header="Date" Binding="{Binding DateDisplay}" Width="140" />
+                <DataGridTextColumn Header="Duration" Binding="{Binding DurationDisplay}" Width="80" />
+                <DataGridTextColumn Header="Folder" Binding="{Binding FolderName}" Width="120" />
+                <DataGridTextColumn Header="Size" Binding="{Binding SizeDisplay}" Width="80" />
+                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="140" />
+                <DataGridTemplateColumn Header="Progress" Width="100">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate x:DataType="vm:PlaudRecordingItem">
+                            <ProgressBar Value="{Binding Progress}"
+                                         Maximum="1"
+                                         Height="4"
+                                         Margin="4,0"
+                                         VerticalAlignment="Center" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+    </DockPanel>
+
+</UserControl>

@@ -30,7 +30,7 @@ jobs:
 
       - name: Publish linux-x64
         run: >
-          dotnet publish src/Transcriptonator/Transcriptonator.csproj
+          dotnet publish src/Phonematic/Phonematic.csproj
           -c Release
           -r linux-x64
           --self-contained
@@ -39,7 +39,7 @@ jobs:
       - name: Upload linux artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Transcriptonator-linux-x64
+          name: Phonematic-linux-x64
           path: publish/linux-x64/
 
   build-windows:
@@ -66,23 +66,23 @@ jobs:
 
       - name: Publish win-x64
         run: >
-          dotnet publish src/Transcriptonator/Transcriptonator.csproj
+          dotnet publish src/Phonematic/Phonematic.csproj
           -c Release
           -r win-x64
           --self-contained
           -o publish/win-x64
 
       - name: Build MSI installer
-        run: dotnet build src/Transcriptonator.Installer/Transcriptonator.Installer.wixproj -c Release
+        run: dotnet build src/Phonematic.Installer/Phonematic.Installer.wixproj -c Release
 
       - name: Upload windows artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Transcriptonator-win-x64
+          name: Phonematic-win-x64
           path: publish/win-x64/
 
       - name: Upload MSI installer
         uses: actions/upload-artifact@v4
         with:
-          name: Transcriptonator-Installer
-          path: src/Transcriptonator.Installer/bin/Release/**/*.msi
+          name: Phonematic-Installer
+          path: src/Phonematic.Installer/bin/Release/**/*.msi

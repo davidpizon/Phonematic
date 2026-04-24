@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="../tests/Phonematic.Tests/Phonematic.Tests.csproj" />
+  <Project Path="Phonematic/Phonematic.csproj" />
+</Solution>

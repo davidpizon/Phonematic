@@ -1,0 +1,49 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Phonematic.ViewModels"
+             x:Class="Phonematic.Views.TranscriptionsView"
+             x:DataType="vm:TranscriptionsViewModel">
+
+    <DockPanel Margin="16">
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+            <Button Content="Refresh" Command="{Binding RefreshCommand}"
+                    DockPanel.Dock="Right" />
+            <TextBlock Text="Transcriptions" FontSize="20" FontWeight="Bold"
+                       VerticalAlignment="Center" />
+        </DockPanel>
+
+        <Grid ColumnDefinitions="300,8,*">
+            <!-- Left: File list -->
+            <ListBox Grid.Column="0"
+                     ItemsSource="{Binding ProcessedFiles}"
+                     SelectedItem="{Binding SelectedFile}"
+                     BorderBrush="Gray" BorderThickness="1">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Margin="4">
+                            <TextBlock Text="{Binding FilePath}"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis" />
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="{Binding TranscribedAtUtc, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
+                                           FontSize="11" Foreground="Gray" />
+                                <TextBlock Text="{Binding AudioDurationSeconds, StringFormat='{}{0:F0}s'}"
+                                           FontSize="11" Foreground="Gray" />
+                            </StackPanel>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <GridSplitter Grid.Column="1" ResizeDirection="Columns" />
+
+            <!-- Right: Transcription text -->
+            <TextBox Grid.Column="2"
+                     Text="{Binding TranscriptionText}"
+                     IsReadOnly="True"
+                     AcceptsReturn="True"
+                     TextWrapping="Wrap"
+                     BorderBrush="Gray" BorderThickness="1" />
+        </Grid>
+    </DockPanel>
+</UserControl>

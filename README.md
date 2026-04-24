@@ -1,4 +1,4 @@
-# Transcriptonator
+# Phonematic
 
 **The Enterprise-Grade Audio Transcription Solution You Didn't Know You Needed™**
 
@@ -6,9 +6,9 @@
 
 ## Overview
 
-Congratulations on your selection of Transcriptonator, a revolutionary audio-to-text conversion system that leverages cutting-edge artificial intelligence to transform your spoken word into searchable, indexable text assets.
+Congratulations on your selection of Phonematic, a revolutionary audio-to-text conversion system that leverages cutting-edge artificial intelligence to transform your spoken word into searchable, indexable text assets.
 
-Unlike our competitors' solutions-which we are contractually obligated not to name but rhyme with "Schmotter" and "Schmamazon"-Transcriptonator runs entirely on your local hardware. Your audio files never leave your premises. Your IT security team can finally sleep at night.
+Unlike our competitors' solutions-which we are contractually obligated not to name but rhyme with "Schmotter" and "Schmamazon"-Phonematic runs entirely on your local hardware. Your audio files never leave your premises. Your IT security team can finally sleep at night.
 
 ## Features
 
@@ -32,19 +32,19 @@ Unlike our competitors' solutions-which we are contractually obligated not to na
 
 ### Windows
 
-Download the MSI installer from the [Releases](https://github.com/chris17453/transcriptionator/releases) page. Double-click. Follow prompts. We've made it simple enough that even management can do it.
+Download the MSI installer from the [Releases](https://github.com/chris17453/phonematic/releases) page. Double-click. Follow prompts. We've made it simple enough that even management can do it.
 
 ### Linux
 
 ```bash
 # Download the latest release
-wget https://github.com/chris17453/transcriptionator/releases/latest/download/Transcriptonator-linux-x64.tar.gz
+wget https://github.com/chris17453/phonematic/releases/latest/download/Phonematic-linux-x64.tar.gz
 
 # Extract
-tar -xzf Transcriptonator-linux-x64.tar.gz
+tar -xzf Phonematic-linux-x64.tar.gz
 
 # Run
-./Transcriptonator
+./Phonematic
 ```
 
 You're using Linux. We trust you can figure out the rest.
@@ -54,10 +54,10 @@ You're using Linux. We trust you can figure out the rest.
 For those who trust no one (we respect that):
 
 ```bash
-git clone https://github.com/chris17453/transcriptionator.git
-cd transcriptionator
+git clone https://github.com/chris17453/phonematic.git
+cd phonematic
 dotnet build -c Release
-dotnet run --project src/Transcriptonator/Transcriptonator.csproj
+dotnet run --project src/Phonematic/Phonematic.csproj
 ```
 
 Requires .NET 10 SDK. Yes, we're living in the future.
@@ -76,7 +76,7 @@ It's not rocket science. It's audio science.
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                    Transcriptonator                 │
+│                    Phonematic                 │
 ├──────────────┬──────────────┬───────────────────────┤
 │   Avalonia   │   Whisper    │      LLamaSharp       │
 │     UI       │    .NET      │    (Local LLM)        │
@@ -119,6 +119,6 @@ MIT License. Use it, modify it, sell it, tattoo it on your forearm. We don't car
 
 ---
 
-*Transcriptonator: Because your audio files aren't going to transcribe themselves.*
+*Phonematic: Because your audio files aren't going to transcribe themselves.*
 
 *Built with caffeine and mass quantities of reasonable expectations*
