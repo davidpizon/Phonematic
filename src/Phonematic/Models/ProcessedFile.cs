@@ -23,7 +23,7 @@ public class ProcessedFile
     /// <summary>Gets or sets the size of the original audio file in bytes.</summary>
     public long FileSizeBytes { get; set; }
 
-    /// <summary>Gets or sets the absolute path to the saved <c>.txt</c> transcription file.</summary>
+    /// <summary>Gets or sets the absolute path to the saved <c>.phos</c> PhoScript transcription file.</summary>
     public string TranscriptionPath { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the UTC timestamp at which transcription completed.</summary>

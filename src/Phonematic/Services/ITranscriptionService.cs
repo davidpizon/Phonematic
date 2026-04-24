@@ -3,8 +3,8 @@ namespace Phonematic.Services;
 /// <summary>
 /// Immutable result returned by <see cref="ITranscriptionService.TranscribeAsync"/>.
 /// </summary>
-/// <param name="Text">Full transcription text with timestamps for every segment.</param>
-/// <param name="OutputPath">Absolute path to the saved <c>.txt</c> file.</param>
+/// <param name="Text">Full transcription text (plain, one line per segment — no markup).</param>
+/// <param name="OutputPath">Absolute path to the saved <c>.phos</c> PhoScript file.</param>
 /// <param name="DurationSeconds">Wall-clock time in seconds taken to complete transcription.</param>
 public record TranscriptionResult(string Text, string OutputPath, double DurationSeconds);
 
@@ -16,8 +16,8 @@ public interface ITranscriptionService
 {
     /// <summary>
     /// Converts <paramref name="audioPath"/> to a 16 kHz mono WAV, runs Whisper inference,
-    /// writes a timestamped <c>.txt</c> file to <paramref name="outputDirectory"/>, and returns
-    /// a <see cref="TranscriptionResult"/> containing the full text, output path, and elapsed time.
+    /// writes a <c>.phos</c> PhoScript 1.0 file to <paramref name="outputDirectory"/>, and returns
+    /// a <see cref="TranscriptionResult"/> containing the plain text, output path, and elapsed time.
     /// </summary>
     /// <param name="audioPath">Absolute path to the source audio file.</param>
     /// <param name="outputDirectory">Directory where the transcript file will be written.</param>

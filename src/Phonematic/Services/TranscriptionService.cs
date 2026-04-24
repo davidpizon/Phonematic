@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Text;
 using Phonematic.Helpers;
 using Whisper.net;
 
@@ -100,7 +99,6 @@ public class TranscriptionService : ITranscriptionService, IDisposable
 
             progress?.Report(0.20);
 
-            var sb = new StringBuilder();
             var segments = new List<SegmentData>();
 
             Log("Starting Whisper processing...");
@@ -108,29 +106,35 @@ public class TranscriptionService : ITranscriptionService, IDisposable
             await foreach (var segment in processor.ProcessAsync(wavStream, ct))
             {
                 segments.Add(segment);
-                sb.AppendLine($"[{segment.Start:hh\\:mm\\:ss} --> {segment.End:hh\\:mm\\:ss}] {segment.Text.Trim()}");
             }
             Log($"Processing complete: {segments.Count} segments extracted");
 
             progress?.Report(0.90);
 
+            var phosContent = PhoScriptWriter.Write(
+                segments,
+                Path.GetFileName(audioPath));
+
+            // Plain-text fallback for embedding / search (segment text only)
+            var plainText = string.Join("\n", segments.Select(s => s.Text.Trim()));
+
             Directory.CreateDirectory(outputDirectory);
-            var outputFileName = Path.GetFileNameWithoutExtension(audioPath) + ".txt";
+            var outputFileName = Path.GetFileNameWithoutExtension(audioPath) + ".phos";
             var outputPath = Path.Combine(outputDirectory, outputFileName);
 
             var counter = 1;
             while (File.Exists(outputPath))
             {
-                outputFileName = $"{Path.GetFileNameWithoutExtension(audioPath)}_{counter++}.txt";
+                outputFileName = $"{Path.GetFileNameWithoutExtension(audioPath)}_{counter++}.phos";
                 outputPath = Path.Combine(outputDirectory, outputFileName);
             }
 
-            await File.WriteAllTextAsync(outputPath, sb.ToString(), ct);
+            await File.WriteAllTextAsync(outputPath, phosContent, System.Text.Encoding.UTF8, ct);
             progress?.Report(1.0);
 
             sw.Stop();
             Log($"Transcription saved to: {outputPath} ({sw.Elapsed.TotalSeconds:F1}s)");
-            return new TranscriptionResult(sb.ToString(), outputPath, sw.Elapsed.TotalSeconds);
+            return new TranscriptionResult(plainText, outputPath, sw.Elapsed.TotalSeconds);
         }
         catch (Exception ex)
         {
