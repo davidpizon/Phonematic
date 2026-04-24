@@ -12,7 +12,7 @@ Phonematic is a desktop application for creating exportable AI voice models that
 2. **Training input** — The user imports two paired files: a plain-text transcript and an audio recording of a human voice reading that exact transcript.
 3. **Model training** — The application analyses the recording against the transcript to learn the speaker's full prosody — pitch contour, timing, stress, rhythm, and intonation — and incorporates that information into the model.
 4. **Export** — The trained model can be exported so it can be shared, archived, or loaded into other tools.
-5. **PhoScript output** — The model produces a PhoScript file (`.phoscript`) that encodes every spoken word together with its complete prosodic annotation, ready for use by downstream synthesis or analysis pipelines.
+5. **PhoScript output** — The model produces a PhoScript file (`.phos`) that encodes every spoken word together with its complete prosodic annotation, ready for use by downstream synthesis or analysis pipelines.
 
 ### Key Concepts
 
