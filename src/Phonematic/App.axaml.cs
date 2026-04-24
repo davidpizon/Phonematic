@@ -10,15 +10,33 @@ using Phonematic.Views;
 
 namespace Phonematic;
 
+/// <summary>
+/// Root Avalonia <see cref="Application"/> class. Acts as the DI composition root:
+/// all services are registered in <see cref="ConfigureServices"/> and the resulting
+/// <see cref="ServiceProvider"/> is stored in the static <see cref="Services"/> property
+/// so that code-behind can resolve dependencies when needed.
+/// </summary>
 public partial class App : Application
 {
+    /// <summary>
+    /// Gets the application-wide DI container. Set during
+    /// <see cref="OnFrameworkInitializationCompleted"/> and available for the lifetime of
+    /// the process. <see langword="null"/> before initialisation completes.
+    /// </summary>
     public static ServiceProvider? Services { get; private set; }
 
+    /// <inheritdoc/>
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
     }
 
+    /// <summary>
+    /// Called by Avalonia after the framework is ready. Builds the DI container, runs
+    /// EF Core migrations, wires up child ViewModels, checks whether all AI models are
+    /// present (triggering the setup wizard if not), and creates the <see cref="MainWindow"/>.
+    /// Any exception during initialisation is surfaced via <see cref="Program.ShowFatalError"/>.
+    /// </summary>
     public override void OnFrameworkInitializationCompleted()
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
@@ -77,6 +95,17 @@ public partial class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 
+    /// <summary>
+    /// Registers all application services, the EF Core context, and ViewModels into
+    /// the provided <paramref name="services"/> collection.
+    /// <list type="table">
+    ///   <listheader><term>Lifetime</term><description>Services</description></listheader>
+    ///   <item><term>Singleton</term><description>Config, ModelManager, AI services, PLAUD services, TokenListener, MainWindowViewModel</description></item>
+    ///   <item><term>Transient</term><description>FileTrackingService, per-tab ViewModels</description></item>
+    ///   <item><term>Singleton factory</term><description>PhonematicDbContext (via AddDbContextFactory)</description></item>
+    /// </list>
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/> to populate.</param>
     private static void ConfigureServices(IServiceCollection services)
     {
         // Core services

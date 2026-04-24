@@ -4,6 +4,12 @@ using Phonematic.Models;
 
 namespace Phonematic.Services;
 
+/// <summary>
+/// Reads and writes the <see cref="AppConfig"/> JSON settings file located at
+/// <c>%LOCALAPPDATA%\Phonematic\config\settings.json</c>, and exposes the well-known
+/// directory paths used throughout the application.
+/// All required directories are created on construction.
+/// </summary>
 public class ConfigService : IConfigService
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -13,16 +19,35 @@ public class ConfigService : IConfigService
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
+    /// <inheritdoc/>
     public string AppDataDirectory { get; }
+
+    /// <inheritdoc/>
     public string ConfigDirectory { get; }
+
+    /// <inheritdoc/>
     public string ModelsDirectory { get; }
+
+    /// <inheritdoc/>
     public string WhisperModelsDirectory { get; }
+
+    /// <inheritdoc/>
     public string OnnxModelsDirectory { get; }
+
+    /// <inheritdoc/>
     public string LlmModelsDirectory { get; }
+
+    /// <inheritdoc/>
     public string DatabasePath { get; }
 
+    /// <summary>Full path to the settings JSON file.</summary>
     private string SettingsFilePath => Path.Combine(ConfigDirectory, "settings.json");
 
+    /// <summary>
+    /// Initialises all directory path properties based on
+    /// <see cref="Environment.SpecialFolder.LocalApplicationData"/> and creates
+    /// every required directory.
+    /// </summary>
     public ConfigService()
     {
         var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
@@ -37,6 +62,7 @@ public class ConfigService : IConfigService
         EnsureDirectories();
     }
 
+    /// <inheritdoc/>
     public AppConfig Load()
     {
         if (!File.Exists(SettingsFilePath))
@@ -50,6 +76,7 @@ public class ConfigService : IConfigService
         return JsonSerializer.Deserialize<AppConfig>(json, JsonOptions) ?? new AppConfig();
     }
 
+    /// <inheritdoc/>
     public void Save(AppConfig config)
     {
         EnsureDirectories();
@@ -57,6 +84,11 @@ public class ConfigService : IConfigService
         File.WriteAllText(SettingsFilePath, json);
     }
 
+    /// <summary>
+    /// Creates all application subdirectories if they do not already exist.
+    /// Called on construction and before every <see cref="Save"/> to guard against
+    /// external deletion.
+    /// </summary>
     private void EnsureDirectories()
     {
         Directory.CreateDirectory(AppDataDirectory);
@@ -66,4 +98,5 @@ public class ConfigService : IConfigService
         Directory.CreateDirectory(OnnxModelsDirectory);
         Directory.CreateDirectory(LlmModelsDirectory);
     }
-}
+
+    }

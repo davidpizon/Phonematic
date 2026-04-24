@@ -2,6 +2,27 @@
 
 This document describes the AI agents and coding guidelines for contributors and automated agents working on the Phonematic project.
 
+## Application Purpose
+
+Phonematic is a desktop application for creating exportable AI voice models that replicate the prosody of a specific human voice.
+
+### Core Workflow
+
+1. **Model management** — The user creates a new empty voice model or imports an existing model file (`.phonematic` format).
+2. **Training input** — The user imports two paired files: a plain-text transcript and an audio recording of a human voice reading that exact transcript.
+3. **Model training** — The application analyses the recording against the transcript to learn the speaker's full prosody — pitch contour, timing, stress, rhythm, and intonation — and incorporates that information into the model.
+4. **Export** — The trained model can be exported so it can be shared, archived, or loaded into other tools.
+5. **PhoScript output** — The model produces a PhoScript file (`.phoscript`) that encodes every spoken word together with its complete prosodic annotation, ready for use by downstream synthesis or analysis pipelines.
+
+### Key Concepts
+
+| Term | Meaning |
+|---|---|
+| Voice model | A trained artefact that captures the acoustic and prosodic characteristics of a single speaker |
+| Prosody | The suprasegmental features of speech: pitch, loudness, duration, rhythm, and intonation |
+| PhoScript | The application's native output format; a structured representation of spoken text with full prosodic markup |
+| Training pair | A matched (transcript text file, audio recording) pair used to train or refine a voice model |
+
 ## General Guidelines
 
 - Follow existing code style and conventions found throughout the codebase.
