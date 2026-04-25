@@ -46,6 +46,8 @@ See also:
 │               Data / Helpers / Models                 │
 │  PhonematicDbContext (EF Core + SQLite)               │
 │  AudioConverter · FileHasher                          │
+│  ArpabetToIpa · CmuDict · GraphemeToPhoneme           │
+│  PhoScriptWriter                                      │
 │  AppConfig · ProcessedFile · TranscriptionChunk       │
 │  PlaudRecording                                       │
 └───────────────────────────────────────────────────────┘
@@ -73,6 +75,11 @@ FileTrackingService.IsFileProcessedAsync
 AudioConverter.ConvertToWavAsync       ← 16kHz mono WAV
         ↓
 TranscriptionService.TranscribeAsync   ← Whisper.net
+        ↓
+PhoScriptWriter.Write                  ← IPA-annotated .phos file
+  ├─ CmuDict.TryGetPhones              ← primary pronunciation lookup
+  └─ GraphemeToPhoneme.Convert         ← rule-based G2P fallback
+       └─ ArpabetToIpa.Convert         ← ARPAbet → slash-delimited IPA
         ↓
 FileTrackingService.RecordTranscriptionAsync  ← persist to DB
         ↓
@@ -177,6 +184,16 @@ Transcribed text files are written to the user-configurable `OutputDirectory` (d
 Text is split into overlapping sentence-level chunks (`ChunkSize` / `ChunkOverlap` tokens, configurable). Each chunk is encoded with `all-MiniLM-L6-v2` (384-dimensional, L2-normalised) via ONNX Runtime with a hand-rolled WordPiece tokeniser. Embeddings are stored as raw `float32` blobs in SQLite.
 
 Retrieval is brute-force cosine similarity over all stored chunks, then top-K results are passed to the LLM as context (Retrieval-Augmented Generation).
+
+## IPA Resolution Strategy
+
+Every `<phon>` element in a `.phos` output file carries an `ipa` attribute with a slash-delimited IPA symbol (e.g. `/k/`, `/æ/`, `/ʃ/`). The resolution order is:
+
+1. **`CmuDict`** — the CMU Pronouncing Dictionary (~134 000 entries, embedded as a resource) is queried first. It returns an ARPAbet phone array for the word (case-insensitive, punctuation stripped).
+2. **`GraphemeToPhoneme`** — if the word is not in the dictionary, a rule-based English G2P engine applies an ordered set of compiled `Regex` rules (digraphs → magic-e → vowel clusters → single-letter defaults) to produce ARPAbet phones.
+3. **`ArpabetToIpa`** — in both paths, every ARPAbet symbol is converted to its IPA equivalent via a static lookup table. Stress digits are stripped; output is always enclosed in `/` per PhoScript convention.
+
+Because Whisper provides only segment-level timestamps, phone-level timing inside each `<word>` is a uniform distribution of the word's time budget across its phones. This is an approximation; forced-alignment would be required for millisecond-accurate per-phone timestamps.
 
 ## Setup Flow
 

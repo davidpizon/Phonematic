@@ -11,9 +11,12 @@ namespace Phonematic.Helpers;
 /// Because Whisper provides segment-level timestamps and word text but no sub-phoneme
 /// acoustic measurements, all prosodic fields that require forced-alignment or signal
 /// analysis are omitted. Word-level timing is approximated by distributing each
-/// segment's duration uniformly across its constituent words. ASR confidence scores
-/// from Whisper tokens are recorded using the reserved <c>asr_*</c> extension
-/// namespace defined by the spec.
+/// segment's duration uniformly across its constituent words, and phone-level timing
+/// is approximated by distributing each word's duration uniformly across its phones.
+/// Each phone is represented using IPA notation via <see cref="CmuDict"/> with
+/// <see cref="GraphemeToPhoneme"/> as a rule-based fallback.
+/// ASR confidence scores from Whisper tokens are recorded using the reserved
+/// <c>asr_*</c> extension namespace defined by the spec.
 /// </para>
 /// </summary>
 public static class PhoScriptWriter
@@ -67,10 +70,28 @@ public static class PhoScriptWriter
                         : segStartMs + durationMs;
                     var isLast = w == words.Count - 1;
                     var boundary = isLast ? "IP_end" : "none";
+                    var wordDurMs = wordEnd - wordStart;
+
+                    var phones = GetIpaPhones(words[w]);
 
                     sb.AppendLine($"  <word orth=\"{Escape(words[w])}\"");
                     sb.AppendLine($"        t_start=\"{wordStart}\" t_end=\"{wordEnd}\"");
-                    sb.AppendLine($"        phrase_boundary=\"{boundary}\"/>");
+                    sb.AppendLine($"        phrase_boundary=\"{boundary}\">");
+
+                    var msPerPhone = phones.Count > 0 ? wordDurMs / phones.Count : 0;
+                    for (var p = 0; p < phones.Count; p++)
+                    {
+                        var phoneStart = wordStart + p * msPerPhone;
+                        var phoneEnd = p < phones.Count - 1
+                            ? wordStart + (p + 1) * msPerPhone
+                            : wordEnd;
+                        var phoneDur = phoneEnd - phoneStart;
+
+                        sb.AppendLine($"    <phon ipa=\"{phones[p]}\"");
+                        sb.AppendLine($"          t_start=\"{phoneStart}\" t_end=\"{phoneEnd}\" dur_ms=\"{phoneDur}\"/>");
+                    }
+
+                    sb.AppendLine("  </word>");
                 }
             }
 
@@ -81,6 +102,28 @@ public static class PhoScriptWriter
 
         // Normalise to LF as required by the spec
         return sb.ToString().Replace("\r\n", "\n");
+    }
+
+    /// <summary>
+    /// Returns the IPA phones for a single orthographic word as slash-delimited IPA
+    /// strings (e.g. <c>"/ɹ/"</c>). Looks up the CMU Pronouncing Dictionary first;
+    /// falls back to rule-based G2P for unknown words.
+    /// </summary>
+    internal static List<string> GetIpaPhones(string word)
+    {
+        string[] arpabet;
+        if (!CmuDict.TryGetPhones(word, out arpabet!))
+            arpabet = GraphemeToPhoneme.Convert(word);
+
+        var phones = new List<string>();
+        foreach (var symbol in arpabet)
+        {
+            // G2P can return space-separated multi-phone tokens (e.g. "K S" for 'x')
+            foreach (var part in symbol.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+                phones.Add(ArpabetToIpa.Convert(part));
+        }
+
+        return phones;
     }
 
     /// <summary>Splits <paramref name="text"/> on whitespace, discarding empty entries.</summary>

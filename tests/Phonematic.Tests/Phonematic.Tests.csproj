@@ -28,4 +28,16 @@
     <ProjectReference Include="..\..\src\Phonematic\Phonematic.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="audio\13787425-1283974.mp3">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="audio\8879234-1249245.mp3">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="audio\Harvard_speech100.wav">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

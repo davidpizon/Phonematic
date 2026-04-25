@@ -32,12 +32,16 @@ dotnet test --filter "FullyQualifiedName=Phonematic.Tests.FileHasherTests.Comput
 | File | What it tests |
 |---|---|
 | `AppConfigTests.cs` | Default property values of `AppConfig`. |
+| `ArpabetToIpaTests.cs` | `ArpabetToIpa.Convert` — correct IPA for all major ARPAbet symbols, stress-digit stripping, slash-delimiter invariant, and fallback format for unknown symbols. |
 | `ChunkTextTests.cs` | `EmbeddingService.ChunkText` — sentence splitting and overlap logic. |
+| `CmuDictTests.cs` | `CmuDict.TryGetPhones` — dictionary hits for common words, case-insensitivity, punctuation stripping, miss path, and `StripPunctuation`. |
 | `ConfigServiceTests.cs` | `ConfigService` directory path computation and settings round-trip. |
 | `ConverterTests.cs` | All four Avalonia value converters (`PercentageConverter`, `FileSizeConverter`, `DurationConverter`, `InverseBoolConverter`). |
 | `DbContextTests.cs` | `PhonematicDbContext` CRUD operations against an in-memory SQLite database. |
 | `FileHasherTests.cs` | `FileHasher.ComputeSha256Async` — hash consistency, correctness, empty file, and cancellation. |
+| `GraphemeToPhonemeTests.cs` | `GraphemeToPhoneme.Convert` — empty/punctuation-only input, common digraphs, case-insensitivity, and non-empty output invariant. |
 | `ModelManagerServiceTests.cs` | `ModelManagerService` path computation and model-presence detection. |
+| `PhoScriptWriterTests.cs` | `PhoScriptWriter.Write`, `GetIpaPhones`, `SplitWords`, and `Escape` — document structure, LF line endings, `<phon>` children present, IPA slash delimiters, timestamp fields, and phrase-boundary attributes. |
 
 ## Patterns and Conventions
 
@@ -94,6 +98,17 @@ Data-driven tests use `[Theory]` + `[InlineData]` for converters and other pure 
 public void PercentageConverter_FormatsCorrectly(double input, string expected) { ... }
 ```
 
+### Testing Internal Helpers
+
+`ArpabetToIpa`, `CmuDict`, `GraphemeToPhoneme`, and `PhoScriptWriter` expose several `internal` methods (e.g. `GetIpaPhones`, `SplitWords`, `Escape`, `StripPunctuation`, `BareIpa`) that are tested directly. The main project exposes them to the test project via:
+
+```csharp
+// src/Phonematic/Properties/AssemblyInfo.cs
+[assembly: InternalsVisibleTo("Phonematic.Tests")]
+```
+
+This avoids wrapping every `internal` method in a `public` shim while still enabling direct unit testing of the helper logic.
+
 ## Adding New Tests
 
 1. Create a file named `<ClassName>Tests.cs` in `tests/Phonematic.Tests/`.
@@ -113,3 +128,5 @@ The following areas are intentionally not covered by automated unit tests becaus
 - `PlaudApiService` (requires live PLAUD API credentials)
 
 These are covered by manual integration testing during development.
+
+The IPA resolution pipeline (`ArpabetToIpa`, `CmuDict`, `GraphemeToPhoneme`) and the `PhoScriptWriter` serializer are fully covered by automated unit tests and do not require any model files or audio.

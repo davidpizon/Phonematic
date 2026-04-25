@@ -381,6 +381,86 @@ Static utility for audio format normalisation and duration detection.
 
 ---
 
+### `ArpabetToIpa`
+**Namespace:** `Phonematic.Helpers`
+
+Static lookup table that maps ARPAbet phoneme symbols (as used in the CMU Pronouncing Dictionary) to their IPA equivalents. Trailing stress digits (`0`, `1`, `2`) are stripped before lookup, so `"AH0"`, `"AH1"`, and `"AH2"` all resolve to the same IPA symbol.
+
+**Methods**
+
+| Method | Description |
+|---|---|
+| `static string Convert(string arpabet)` | Returns the slash-delimited IPA token for an ARPAbet symbol (e.g. `"AH0"` → `"/ʌ/"`, `"SH"` → `"/ʃ/"`). Falls back to the lowercased input wrapped in slashes for unknown symbols. |
+| `internal static string BareIpa(string arpabet)` | Returns the IPA string without enclosing slashes. Used internally by the G2P pipeline. |
+
+**Coverage:** All standard ARPAbet vowels (`AA`, `AE`, `AH`, `AO`, `AW`, `AX`, `AY`, `EH`, `ER`, `EY`, `IH`, `IX`, `IY`, `OW`, `OY`, `UH`, `UW`, `UX`) and consonants (`B`, `CH`, `D`, `DH`, `DX`, `EL`, `EM`, `EN`, `F`, `G`, `HH`, `JH`, `K`, `L`, `M`, `N`, `NG`, `NX`, `P`, `Q`, `R`, `S`, `SH`, `T`, `TH`, `V`, `W`, `WH`, `Y`, `Z`, `ZH`).
+
+---
+
+### `CmuDict`
+**Namespace:** `Phonematic.Helpers`
+
+Provides word → ARPAbet phone-sequence lookup against the embedded CMU Pronouncing Dictionary (`cmudict.dict`, ≈125 KB, ~134 000 entries). The dictionary is loaded lazily on first access in a thread-safe manner and kept in memory for the lifetime of the process. Only the primary pronunciation variant is retained; alternate entries (e.g. `word(2)`) are ignored.
+
+**Methods**
+
+| Method | Description |
+|---|---|
+| `static bool TryGetPhones(string word, out string[] phones)` | Looks up `word` (case-insensitive; leading/trailing punctuation stripped). Returns `true` and the ARPAbet phone array when found, `false` and `null` when not. |
+| `internal static string StripPunctuation(string word)` | Trims punctuation characters (`.`, `,`, `!`, `?`, `;`, `:`, `"`, `'`, `(`, `)`, `[`, `]`, `-`) from both ends of the word before dictionary lookup. |
+
+The dictionary is embedded in the main assembly as `Phonematic.Helpers.cmudict.dict` via `<EmbeddedResource>` in `Phonematic.csproj`.
+
+---
+
+### `GraphemeToPhoneme`
+**Namespace:** `Phonematic.Helpers`
+
+Rule-based English grapheme-to-phoneme (G2P) fallback, used by `PhoScriptWriter` when a word is absent from `CmuDict`. Outputs ARPAbet symbols so the same `ArpabetToIpa` conversion pipeline is used for all PhoScript output regardless of the lookup path.
+
+Rules are applied left-to-right from a compiled ordered `Regex` table. More-specific patterns (digraphs, magic-e sequences, vowel clusters) appear before single-letter defaults. Unknown characters produce a schwa (`AH0`). Multi-phone ARPAbet tokens (e.g. `"K S"` for the grapheme *x*) are returned as a single space-separated string element and split by `PhoScriptWriter.GetIpaPhones`.
+
+**Methods**
+
+| Method | Description |
+|---|---|
+| `static string[] Convert(string word)` | Converts an orthographic word to an ARPAbet phone array using letter-to-sound rules. Non-alphabetic characters are stripped before processing. Returns an empty array for blank or punctuation-only input. |
+
+---
+
+### `PhoScriptWriter`
+**Namespace:** `Phonematic.Helpers`
+
+Serializes Whisper `SegmentData` results to [PhoScript 1.0](PHOSCRIPT.md) format (`.phos`). Each `<word>` block is an open/close element containing one `<phon>` child per phone in the word's pronunciation. IPA symbols are resolved via `CmuDict` (primary) and `GraphemeToPhoneme` (fallback).
+
+Because Whisper provides only segment-level timestamps, phone-level timing is approximated by distributing each word's duration uniformly across its phones, and word-level timing is distributed uniformly across the segment.
+
+**Methods**
+
+| Method | Description |
+|---|---|
+| `static string Write(IReadOnlyList<SegmentData> segments, string sourceFileName, DateOnly? recordedDate = null)` | Builds a complete PhoScript document. Returns a UTF-8 string with LF line endings and no BOM. |
+| `internal static List<string> GetIpaPhones(string word)` | Resolves the IPA phone list for a single word. Tries `CmuDict` first; falls back to `GraphemeToPhoneme`. Splits any space-separated multi-phone ARPAbet tokens. Returns slash-delimited IPA strings. |
+| `internal static List<string> SplitWords(string text)` | Splits text on whitespace, discarding empty entries. |
+| `internal static string Escape(string value)` | Escapes the minimal set of XML attribute characters (`&`, `"`, `<`, `>`). |
+
+**Example `<word>` output:**
+
+```xml
+<word orth="cat"
+      t_start="0" t_end="333"
+      phrase_boundary="none">
+    <phon ipa="/k/"
+          t_start="0" t_end="111" dur_ms="111"/>
+    <phon ipa="/æ/"
+          t_start="111" t_end="222" dur_ms="111"/>
+    <phon ipa="/t/"
+          t_start="222" t_end="333" dur_ms="111"/>
+</word>
+```
+
+---
+
 ## Converters
 
 Avalonia `IValueConverter` implementations in `Phonematic.Converters`. All expose a static `Instance` singleton.
