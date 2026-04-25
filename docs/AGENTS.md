@@ -2,6 +2,19 @@
 
 This document describes the AI agents and coding guidelines for contributors and automated agents working on the Phonematic project.
 
+## Documentation
+
+All project documentation lives in the `/docs` folder. Refer to these documents when working on related areas:
+
+| Document | Description |
+|---|---|
+| [API.md](API.md) | Full reference for all public classes, interfaces, records, and ViewModels |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | System architecture, data flows, DB schema, and file layout |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Development workflow, coding standards, and PR checklist |
+| [TESTING.md](TESTING.md) | Test suite structure, patterns, and how to run tests |
+| [PHOSCRIPT.md](PHOSCRIPT.md) | PhoScript 1.0 specification — the application's prosodic markup output format |
+| [IPA_REFERENCE.md](IPA_REFERENCE.md) | International Phonetic Alphabet reference — consonants, vowels, diacritics |
+
 ## Application Purpose
 
 Phonematic is a desktop application for creating exportable AI voice models that replicate the prosody of a specific human voice.

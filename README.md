@@ -128,6 +128,8 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for a detailed description of a
 | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Development workflow, coding standards, PR checklist |
 | [docs/TESTING.md](docs/TESTING.md) | Test suite structure, patterns, and how to run tests |
 | [docs/AGENTS.md](docs/AGENTS.md) | Guidelines for AI coding agents working on this repo |
+| [docs/PHOSCRIPT.md](docs/PHOSCRIPT.md) | PhoScript 1.0 specification — prosodic markup format for `.phos` files |
+| [docs/IPA_REFERENCE.md](docs/IPA_REFERENCE.md) | International Phonetic Alphabet reference — how sounds are represented in IPA |
 
 ## FAQ
 

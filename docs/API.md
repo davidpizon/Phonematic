@@ -2,6 +2,13 @@
 
 Complete reference for all public classes, interfaces, and records in the Phonematic codebase.
 
+See also:
+- [ARCHITECTURE.md](ARCHITECTURE.md) — system layers, data flows, and DB schema
+- [PHOSCRIPT.md](PHOSCRIPT.md) — PhoScript 1.0 specification (`.phos` output format)
+- [IPA_REFERENCE.md](IPA_REFERENCE.md) — IPA symbol reference used in PhoScript `ipa` attributes
+- [TESTING.md](TESTING.md) — test patterns for the classes documented here
+- [CONTRIBUTING.md](CONTRIBUTING.md) — guidelines for adding new public APIs
+
 ---
 
 ## Models

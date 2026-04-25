@@ -2,6 +2,11 @@
 
 This document describes the test suite structure, patterns, and how to run tests for Phonematic.
 
+See also:
+- [API.md](API.md) — public API reference for the classes under test
+- [ARCHITECTURE.md](ARCHITECTURE.md) — system architecture and data flows
+- [CONTRIBUTING.md](CONTRIBUTING.md) — guidelines for adding new tests
+
 ## Overview
 
 Tests live in `tests/Phonematic.Tests/` and use **xUnit v3** targeting **.NET 10**. All tests are pure unit tests — no model files, network calls, or GUI are required.

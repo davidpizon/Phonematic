@@ -2,6 +2,13 @@
 
 This document describes the high-level architecture of Phonematic — a local-first audio transcription and search desktop application built with Avalonia UI on .NET 10.
 
+See also:
+- [API.md](API.md) — full reference for all classes, interfaces, and records mentioned here
+- [CONTRIBUTING.md](CONTRIBUTING.md) — development workflow and coding standards
+- [TESTING.md](TESTING.md) — test suite structure and patterns
+- [PHOSCRIPT.md](PHOSCRIPT.md) — PhoScript 1.0 specification (`.phos` output format produced by `PhoScriptWriter`)
+- [IPA_REFERENCE.md](IPA_REFERENCE.md) — IPA symbol reference used in PhoScript output
+
 ## Technology Stack
 
 | Layer | Technology |

@@ -2,6 +2,12 @@
 
 > A text-based markup language for millisecond-accurate prosodic representation of spoken utterances.
 
+See also:
+- [IPA_REFERENCE.md](IPA_REFERENCE.md) — full IPA symbol reference for values used in `ipa` attributes
+- [API.md](API.md) — `PhoScriptWriter` helper and related service APIs
+- [ARCHITECTURE.md](ARCHITECTURE.md) — where PhoScript fits in the application output pipeline
+- [AGENTS.md](AGENTS.md) — coding guidelines for contributors extending the format
+
 ---
 
 ## Table of Contents

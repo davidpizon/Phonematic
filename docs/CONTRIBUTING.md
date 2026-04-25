@@ -28,7 +28,7 @@ tests/Phonematic.Tests/   ← xUnit unit tests
 docs/                     ← Documentation (Markdown)
 ```
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for a full description of layers and data flow.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for a full description of layers and data flow. See [API.md](API.md) for the full public API reference, [PHOSCRIPT.md](PHOSCRIPT.md) for the PhoScript output format, and [IPA_REFERENCE.md](IPA_REFERENCE.md) for the IPA symbol reference used in PhoScript.
 
 ## Development Workflow
 
@@ -124,6 +124,8 @@ Update Whisper model download retry logic
 
 - [ ] `dotnet build` passes with no errors or warnings.
 - [ ] `dotnet test` passes.
-- [ ] New public APIs are documented in `docs/API.md`.
-- [ ] Architectural changes are reflected in `docs/ARCHITECTURE.md`.
+- [ ] New public APIs are documented in [API.md](API.md).
+- [ ] Architectural changes are reflected in [ARCHITECTURE.md](ARCHITECTURE.md).
+- [ ] PhoScript format changes are reflected in [PHOSCRIPT.md](PHOSCRIPT.md).
+- [ ] IPA usage changes are reflected in [IPA_REFERENCE.md](IPA_REFERENCE.md).
 - [ ] PR description explains *what* changed and *why*.
