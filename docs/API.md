@@ -4,6 +4,7 @@ Complete reference for all public classes, interfaces, and records in the Phonem
 
 See also:
 - [ARCHITECTURE.md](ARCHITECTURE.md) — system layers, data flows, and DB schema
+- [CHANGELOG.md](CHANGELOG.md) — history of all notable changes
 - [PHOSCRIPT.md](PHOSCRIPT.md) — PhoScript 1.0 specification (`.phos` output format)
 - [IPA_REFERENCE.md](IPA_REFERENCE.md) — IPA symbol reference used in PhoScript `ipa` attributes
 - [TESTING.md](TESTING.md) — test patterns for the classes documented here
@@ -29,6 +30,8 @@ Persisted application configuration. Serialised to `%LOCALAPPDATA%\Phonematic\co
 | `RagTopK` | `int` | `5` | Number of top chunks returned by vector search. |
 | `MaxConcurrentPlaudDownloads` | `int` | `3` | Semaphore limit for parallel PLAUD file downloads. |
 | `LastImportPath` | `string` | `""` | Restored on startup to pre-populate the Transcribe view. |
+| `TranscriptionBackend` | `string` | `"acoustic"` | Active transcription backend: `"acoustic"` (wav2vec2 pipeline) or `"whisper"` (legacy). |
+| `UseGpuForTraining` | `bool` | `false` | When `true`, TorchSharp uses CUDA for voice model training (requires `libtorch-cuda-12.8-win-x64`). |
 
 ---
 
@@ -88,6 +91,39 @@ EF Core entity. Mirrors a recording fetched from the PLAUD cloud API.
 
 ---
 
+### `VoiceModel`
+**Namespace:** `Phonematic.Models`
+
+EF Core entity. Represents a user-created speaker adaptation model trained by `VoiceModelTrainingService`.
+
+| Property | Type | Description |
+|---|---|---|
+| `Id` | `int` | Primary key. |
+| `Name` | `string` | Display name for the voice model (indexed). |
+| `ModelPath` | `string?` | Absolute path to the saved `adapter.phonematic` checkpoint file. |
+| `CreatedAtUtc` | `DateTime` | UTC timestamp when the model was created. |
+| `LastTrainedAtUtc` | `DateTime?` | UTC timestamp of the most recent training run (null if never trained). |
+| `BestPhoneErrorRate` | `double` | Phone Error Rate on the validation set from the best training epoch. |
+| `TrainingPairs` | `ICollection<TrainingPair>` | Navigation property — the audio/transcript pairs used for training. |
+
+---
+
+### `TrainingPair`
+**Namespace:** `Phonematic.Models`
+
+EF Core entity. An `(audio, transcript)` pair linked to a `VoiceModel`.
+
+| Property | Type | Description |
+|---|---|---|
+| `Id` | `int` | Primary key. |
+| `VoiceModelId` | `int` | Foreign key to `VoiceModel.Id` (cascade delete). |
+| `AudioPath` | `string` | Absolute path to the audio file used for training. |
+| `TranscriptPath` | `string` | Absolute path to the plain-text transcript. |
+| `FeaturesExtracted` | `bool` | Whether the wav2vec2 hidden-state cache has been generated for this pair. |
+| `VoiceModel` | `VoiceModel` | Navigation property. |
+
+---
+
 ## Services
 
 ### `IConfigService` / `ConfigService`
@@ -105,6 +141,8 @@ Manages reading and writing the `AppConfig` JSON settings file and exposes well-
 | `WhisperModelsDirectory` | `ModelsDirectory\whisper` |
 | `OnnxModelsDirectory` | `ModelsDirectory\onnx` |
 | `LlmModelsDirectory` | `ModelsDirectory\llm` |
+| `AcousticModelsDirectory` | `ModelsDirectory\acoustic` |
+| `VoiceModelsDirectory` | `ModelsDirectory\voice_models` |
 | `DatabasePath` | `AppDataDirectory\Phonematic.db` |
 
 **Methods**
@@ -136,14 +174,17 @@ Downloads and locates the three AI model files required by the application.
 | `bool IsWhisperModelDownloaded(string modelSize)` | Returns `true` if the GGML binary exists on disk. |
 | `bool IsOnnxModelDownloaded()` | Returns `true` if both `model.onnx` and `vocab.txt` exist. |
 | `bool IsLlmModelDownloaded()` | Returns `true` if the Phi-3 GGUF exists. |
-| `bool AreAllModelsReady(string whisperModelSize)` | Convenience AND of all three checks. |
+| `bool IsWav2Vec2ModelDownloaded()` | Returns `true` if `acoustic/wav2vec2-phoneme.onnx` exists. |
+| `bool AreAllModelsReady(string whisperModelSize)` | AND of all four model checks. |
 | `string GetWhisperModelPath(string modelSize)` | Returns absolute path for a given model size key. |
 | `string GetOnnxModelPath()` | Returns absolute path to `model.onnx`. |
 | `string GetOnnxVocabPath()` | Returns absolute path to `vocab.txt`. |
 | `string GetLlmModelPath()` | Returns absolute path to the Phi-3 GGUF. |
+| `string GetWav2Vec2ModelPath()` | Returns absolute path to `acoustic/wav2vec2-phoneme.onnx`. |
 | `Task DownloadWhisperModelAsync(string modelSize, IProgress<double>?, CancellationToken)` | Streams the GGML model; writes to a `.tmp` file then renames on success. Retries up to 3 times. |
 | `Task DownloadOnnxModelAsync(IProgress<double>?, CancellationToken)` | Downloads `model.onnx` and `vocab.txt`. |
 | `Task DownloadLlmModelAsync(IProgress<double>?, CancellationToken)` | Downloads the Phi-3 GGUF (up to ~2 GB). |
+| `Task DownloadWav2Vec2ModelAsync(IProgress<double>?, CancellationToken)` | Downloads `wav2vec2-phoneme.onnx`. No-ops if already present. |
 
 ---
 

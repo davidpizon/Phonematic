@@ -4,6 +4,7 @@ This document describes the high-level architecture of Phonematic — a local-fi
 
 See also:
 - [API.md](API.md) — full reference for all classes, interfaces, and records mentioned here
+- [CHANGELOG.md](CHANGELOG.md) — history of all notable changes
 - [CONTRIBUTING.md](CONTRIBUTING.md) — development workflow and coding standards
 - [TESTING.md](TESTING.md) — test suite structure and patterns
 - [PHOSCRIPT.md](PHOSCRIPT.md) — PhoScript 1.0 specification (`.phos` output format produced by `PhoScriptWriter`)
@@ -17,6 +18,9 @@ See also:
 | MVVM | [CommunityToolkit.Mvvm](https://learn.microsoft.com/en-us/dotnet/communitytoolkit/mvvm/) |
 | Database | SQLite via [Entity Framework Core](https://learn.microsoft.com/en-us/ef/core/) |
 | Speech-to-text | [Whisper.net](https://github.com/sandrohanea/whisper.net) (OpenAI Whisper, GGML models) |
+| Acoustic analysis | NWaves 0.9.6 (`PitchExtractor`, `TimeDomainFeaturesExtractor`) + NAudio |
+| Phone recognition | ONNX Runtime — wav2vec2 TIMIT phone model |
+| Speaker adaptation | [TorchSharp](https://github.com/dotnet/TorchSharp) — CTC-trained 2-layer adapter |
 | Embedding model | ONNX Runtime — `all-MiniLM-L6-v2` (sentence-transformers) |
 | LLM | [LLamaSharp](https://github.com/SciSharp/LLamaSharp) — Microsoft Phi-3 Mini 4k (Q4 GGUF) |
 | Audio decoding | NAudio (Windows) / ffmpeg (Linux/macOS) |
@@ -39,6 +43,9 @@ See also:
 │                      Services                         │
 │  ConfigService · ModelManagerService                  │
 │  TranscriptionService · EmbeddingService              │
+│  AcousticFeatureExtractorService                      │
+│  AcousticPhoneRecognizerService                       │
+│  VoiceModelTrainingService · VoiceModelService        │
 │  VectorSearchService · LlmService                     │
 │  FileTrackingService · PlaudApiService                │
 │  TokenListenerService                                 │
@@ -47,9 +54,9 @@ See also:
 │  PhonematicDbContext (EF Core + SQLite)               │
 │  AudioConverter · FileHasher                          │
 │  ArpabetToIpa · CmuDict · GraphemeToPhoneme           │
-│  PhoScriptWriter                                      │
+│  PhoScriptWriter · CtcDecoder                         │
 │  AppConfig · ProcessedFile · TranscriptionChunk       │
-│  PlaudRecording                                       │
+│  PlaudRecording · VoiceModel · TrainingPair           │
 └───────────────────────────────────────────────────────┘
 ```
 
@@ -63,6 +70,10 @@ ViewModels are registered as **singletons** and resolved directly from the conta
 
 ### Transcription Pipeline
 
+Two backends are supported, selected via `AppConfig.TranscriptionBackend`.
+
+#### Acoustic backend (`"acoustic"`, default)
+
 ```
 User selects audio file(s)
         ↓
@@ -74,9 +85,35 @@ FileTrackingService.IsFileProcessedAsync
         ↓  (if not already processed)
 AudioConverter.ConvertToWavAsync       ← 16kHz mono WAV
         ↓
-TranscriptionService.TranscribeAsync   ← Whisper.net
+AcousticPhoneRecognizerService.RecognizeAsync  ← wav2vec2 ONNX → PhoneAlignment[]
         ↓
-PhoScriptWriter.Write                  ← IPA-annotated .phos file
+AcousticFeatureExtractorService.ExtractFramesAsync  ← NWaves → AcousticFeatureFrame[]
+        ↓
+AcousticFeatureExtractorService.ComputeSpeakerBaseline
+        ↓
+PhoScriptWriter.Write                  ← fully-annotated .phos (XmlWriter)
+        ↓
+FileTrackingService.RecordTranscriptionAsync  ← persist to DB
+        ↓
+EmbeddingService.StoreChunksAsync      ← chunk → ONNX embed → DB
+```
+
+#### Legacy Whisper backend (`"whisper"`)
+
+```
+User selects audio file(s)
+        ↓
+TranscribeViewModel.StartTranscriptionAsync
+        ↓
+FileHasher.ComputeSha256Async          ← dedup check
+        ↓
+FileTrackingService.IsFileProcessedAsync
+        ↓  (if not already processed)
+AudioConverter.ConvertToWavAsync       ← 16kHz mono WAV
+        ↓
+TranscriptionService.TranscribeAsync   ← Whisper.net → SegmentData[]
+        ↓
+PhoScriptWriter.WriteLegacy            ← timing-approximated .phos (XmlWriter)
   ├─ CmuDict.TryGetPhones              ← primary pronunciation lookup
   └─ GraphemeToPhoneme.Convert         ← rule-based G2P fallback
        └─ ArpabetToIpa.Convert         ← ARPAbet → slash-delimited IPA
@@ -155,6 +192,21 @@ PlaudRecordings
   IsDownloaded          INTEGER
   DownloadedAtUtc       TEXT
   FileSizeBytes         INTEGER
+
+VoiceModels
+  Id                    INTEGER PK
+  Name                  TEXT (indexed)
+  ModelPath             TEXT
+  CreatedAtUtc          TEXT
+  LastTrainedAtUtc      TEXT
+  BestPhoneErrorRate    REAL
+
+TrainingPairs
+  Id                    INTEGER PK
+  VoiceModelId          INTEGER FK → VoiceModels.Id (CASCADE DELETE)
+  AudioPath             TEXT
+  TranscriptPath        TEXT
+  FeaturesExtracted     INTEGER
 ```
 
 ## File System Layout
@@ -171,8 +223,13 @@ All runtime data is stored under `%LOCALAPPDATA%\Phonematic\`:
 │   ├── onnx\
 │   │   ├── model.onnx         ← all-MiniLM-L6-v2
 │   │   └── vocab.txt
-│   └── llm\
-│       └── phi-3-mini-4k-instruct-q4.gguf
+│   ├── llm\
+│   │   └── phi-3-mini-4k-instruct-q4.gguf
+│   └── acoustic\
+│       └── wav2vec2-phoneme.onnx  ← wav2vec2 TIMIT phone model
+├── voice_models\
+│   └── <id>\
+│       └── adapter.phonematic ← trained TorchSharp adapter checkpoint
 ├── Phonematic.db              ← SQLite database
 └── transcription.log          ← append-only log
 ```
