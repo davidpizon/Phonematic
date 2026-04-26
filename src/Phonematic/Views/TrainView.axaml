@@ -1,0 +1,78 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Phonematic.ViewModels"
+             x:Class="Phonematic.Views.TrainView"
+             x:DataType="vm:TrainViewModel">
+
+    <DockPanel Margin="16">
+        <!-- Top: Input path and browse buttons -->
+        <StackPanel DockPanel.Dock="Top" Spacing="8">
+            <TextBlock Text="Train Voice Model" FontSize="20" FontWeight="Bold" />
+
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4">
+                    <Button Content="Browse File" Command="{Binding BrowseFileCommand}" />
+                    <Button Content="Browse Folder" Command="{Binding BrowseFolderCommand}" />
+                </StackPanel>
+                <TextBox Text="{Binding InputPath}" PlaceholderText="Enter file or folder path..."
+                         Margin="0,0,8,0" />
+            </DockPanel>
+        </StackPanel>
+
+        <!-- Bottom: Progress and controls -->
+        <StackPanel DockPanel.Dock="Bottom" Spacing="8" Margin="0,8,0,0">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4">
+                    <Button Content="Start Training"
+                            Command="{Binding StartTrainingCommand}"
+                            IsEnabled="{Binding !IsTraining}" />
+                    <Button Content="Cancel"
+                            Command="{Binding StartTrainingCancelCommand}"
+                            IsEnabled="{Binding IsTraining}" />
+                </StackPanel>
+                <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" />
+            </DockPanel>
+
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Left" Text="Current File:" Margin="0,0,8,0"
+                           VerticalAlignment="Center" />
+                <ProgressBar Value="{Binding CurrentFileProgress}"
+                             Minimum="0" Maximum="1" Height="16" />
+            </DockPanel>
+
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Left" Text="Overall:" Margin="0,0,8,0"
+                           VerticalAlignment="Center" />
+                <ProgressBar Value="{Binding OverallProgress}"
+                             Minimum="0" Maximum="1" Height="16" />
+            </DockPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="16">
+                <TextBlock>
+                    <Run Text="Completed: " /><Run Text="{Binding CompletedCount}" FontWeight="Bold" />
+                </TextBlock>
+                <TextBlock>
+                    <Run Text="Skipped: " /><Run Text="{Binding SkippedCount}" FontWeight="Bold" />
+                </TextBlock>
+                <TextBlock>
+                    <Run Text="Failed: " /><Run Text="{Binding FailedCount}" FontWeight="Bold" />
+                </TextBlock>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Center: File list -->
+        <DataGrid ItemsSource="{Binding Files}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  Margin="0,8"
+                  GridLinesVisibility="Horizontal"
+                  BorderBrush="Gray" BorderThickness="1">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" Width="*" />
+                <DataGridTextColumn Header="Size" Binding="{Binding FileSizeDisplay}" Width="100" />
+                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="150" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+
+</UserControl>

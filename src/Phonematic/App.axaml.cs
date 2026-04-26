@@ -60,8 +60,10 @@ public partial class App : Application
                 var config = configService.Load();
 
                 // Wire up child ViewModels
+                mainVm.Model = Services.GetRequiredService<ModelViewModel>();
                 mainVm.Transcribe = Services.GetRequiredService<TranscribeViewModel>();
                 mainVm.Transcriptions = Services.GetRequiredService<TranscriptionsViewModel>();
+                mainVm.Train = Services.GetRequiredService<TrainViewModel>();
                 mainVm.Search = Services.GetRequiredService<SearchViewModel>();
                 mainVm.Settings = Services.GetRequiredService<SettingsViewModel>();
                 mainVm.PlaudSync = Services.GetRequiredService<PlaudSyncViewModel>();
@@ -124,6 +126,9 @@ public partial class App : Application
             options.UseSqlite($"Data Source={config.DatabasePath}");
         }, ServiceLifetime.Singleton);
 
+        // Voice model (active session model — in-memory, not persisted)
+        services.AddSingleton<IActiveVoiceModelService, ActiveVoiceModelService>();
+
         // Data services
         services.AddTransient<IFileTrackingService, FileTrackingService>();
 
@@ -139,8 +144,10 @@ public partial class App : Application
 
         // ViewModels
         services.AddSingleton<MainWindowViewModel>();
+        services.AddTransient<ModelViewModel>();
         services.AddTransient<TranscribeViewModel>();
         services.AddTransient<TranscriptionsViewModel>();
+        services.AddTransient<TrainViewModel>();
         services.AddTransient<SearchViewModel>();
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<PlaudSyncViewModel>();

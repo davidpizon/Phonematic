@@ -1,0 +1,51 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Phonematic.ViewModels"
+             x:Class="Phonematic.Views.ModelView"
+             x:DataType="vm:ModelViewModel">
+
+    <ScrollViewer>
+        <StackPanel Margin="16" Spacing="16" MaxWidth="600">
+            <TextBlock Text="Voice Model" FontSize="20" FontWeight="Bold" />
+
+            <!-- Active model details -->
+            <StackPanel Spacing="4">
+                <TextBlock Text="Name" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding ModelName}"
+                           FontStyle="Italic"
+                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+            </StackPanel>
+
+            <StackPanel Spacing="4">
+                <TextBlock Text="File Path" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding ModelPath}"
+                           FontStyle="Italic"
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+            </StackPanel>
+
+            <StackPanel Spacing="4">
+                <TextBlock Text="Trained Date" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding TrainedDate}"
+                           FontStyle="Italic"
+                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+            </StackPanel>
+
+            <!-- Action buttons -->
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="Load"
+                        Command="{Binding LoadCommand}"
+                        MinWidth="80" />
+                <Button Content="Export"
+                        Command="{Binding ExportCommand}"
+                        MinWidth="80" />
+            </StackPanel>
+
+            <!-- Status feedback -->
+            <TextBlock Text="{Binding StatusText}"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        </StackPanel>
+    </ScrollViewer>
+
+</UserControl>

@@ -32,11 +32,17 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>Gets or sets the ViewModel for the Transcriptions history tab.</summary>
     public TranscriptionsViewModel? Transcriptions { get; set; }
 
+    /// <summary>Gets or sets the ViewModel for the Train tab.</summary>
+    public TrainViewModel? Train { get; set; }
+
     /// <summary>Gets or sets the ViewModel for the Search / RAG tab.</summary>
     public SearchViewModel? Search { get; set; }
 
     /// <summary>Gets or sets the ViewModel for the Settings tab.</summary>
     public SettingsViewModel? Settings { get; set; }
+
+    /// <summary>Gets or sets the ViewModel for the Model tab.</summary>
+    public ModelViewModel? Model { get; set; }
 
     /// <summary>Gets or sets the ViewModel for the PLAUD Sync tab.</summary>
     public PlaudSyncViewModel? PlaudSync { get; set; }

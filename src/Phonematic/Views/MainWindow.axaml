@@ -17,11 +17,17 @@
         <!-- Main TabControl (hidden during setup) -->
         <TabControl SelectedIndex="{Binding SelectedTabIndex}"
                     IsVisible="{Binding !IsSetupRequired}">
+            <TabItem Header="Model">
+                <views:ModelView DataContext="{Binding Model}" />
+            </TabItem>
             <TabItem Header="Transcribe">
                 <views:TranscribeView DataContext="{Binding Transcribe}" />
             </TabItem>
             <TabItem Header="Transcriptions">
                 <views:TranscriptionsView DataContext="{Binding Transcriptions}" />
+            </TabItem>
+            <TabItem Header="Train">
+                <views:TrainView DataContext="{Binding Train}" />
             </TabItem>
             <TabItem Header="AI Search">
                 <views:SearchView DataContext="{Binding Search}" />
