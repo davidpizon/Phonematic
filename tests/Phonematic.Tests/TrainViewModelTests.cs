@@ -4,9 +4,9 @@ using Phonematic.ViewModels;
 namespace Phonematic.Tests;
 
 /// <summary>
-/// Unit tests for <see cref="TrainViewModel"/>.
-/// Uses a lightweight <see cref="FakeConfigService"/> test double so no real file I/O
-/// or DI infrastructure is required.
+/// Unit tests for <see cref="TrainViewModel"/> and <see cref="TrainFileItem"/>.
+/// Uses <see cref="ConfigService"/> directly; all file I/O is performed against
+/// temporary directories/files that are cleaned up in <c>finally</c> blocks.
 /// </summary>
 public class TrainViewModelTests
 {
@@ -45,127 +45,355 @@ public class TrainViewModelTests
     }
 
     // -------------------------------------------------------------------------
-    // LoadFiles — single file
+    // LoadInputSets — folder scanning
     // -------------------------------------------------------------------------
 
     [Fact]
-    public void LoadFiles_PopulatesFiles_WithSupportedAudioFile()
+    public void LoadInputSets_PopulatesFiles_WithSupportedAudioFile()
     {
         var vm = BuildViewModel();
-        var path = CreateTempAudioFile("sample.mp3");
+        var dir = CreateTempDir();
         try
         {
-            vm.LoadFiles(path);
+            CreateFile(dir, "sample.mp3");
+            vm.LoadInputSets(dir);
             Assert.Single(vm.Files);
-            Assert.Equal("sample.mp3", vm.Files[0].FileName);
+            Assert.Equal("sample", vm.Files[0].FileName);
         }
-        finally
-        {
-            File.Delete(path);
-        }
+        finally { Directory.Delete(dir, recursive: true); }
     }
 
     [Fact]
-    public void LoadFiles_SetsInputPath()
+    public void LoadInputSets_SetsInputPath()
     {
         var vm = BuildViewModel();
-        var path = CreateTempAudioFile("test.wav");
+        var dir = CreateTempDir();
         try
         {
-            vm.LoadFiles(path);
-            Assert.Equal(path, vm.InputPath);
+            CreateFile(dir, "test.wav");
+            vm.LoadInputSets(dir);
+            Assert.Equal(dir, vm.InputPath);
         }
-        finally
-        {
-            File.Delete(path);
-        }
+        finally { Directory.Delete(dir, recursive: true); }
     }
 
     [Fact]
-    public void LoadFiles_SetsFileStatusToPending()
+    public void LoadInputSets_SetsFileStatusToPending()
     {
         var vm = BuildViewModel();
-        var path = CreateTempAudioFile("check.mp3");
+        var dir = CreateTempDir();
         try
         {
-            vm.LoadFiles(path);
+            CreateFile(dir, "check.mp3");
+            vm.LoadInputSets(dir);
             Assert.Equal("Pending", vm.Files[0].Status);
         }
-        finally
-        {
-            File.Delete(path);
-        }
+        finally { Directory.Delete(dir, recursive: true); }
     }
 
     [Fact]
-    public void LoadFiles_ClearsExistingFiles_OnSubsequentCall()
+    public void LoadInputSets_ClearsExistingFiles_OnSubsequentCall()
     {
         var vm = BuildViewModel();
-        var path1 = CreateTempAudioFile("first.mp3");
-        var path2 = CreateTempAudioFile("second.mp3");
+        var dir1 = CreateTempDir();
+        var dir2 = CreateTempDir();
         try
         {
-            vm.LoadFiles(path1);
-            vm.LoadFiles(path2);
+            CreateFile(dir1, "first.mp3");
+            CreateFile(dir2, "second.mp3");
+            vm.LoadInputSets(dir1);
+            vm.LoadInputSets(dir2);
             Assert.Single(vm.Files);
-            Assert.Equal("second.mp3", vm.Files[0].FileName);
+            Assert.Equal("second", vm.Files[0].FileName);
         }
         finally
         {
-            File.Delete(path1);
-            File.Delete(path2);
+            Directory.Delete(dir1, recursive: true);
+            Directory.Delete(dir2, recursive: true);
         }
     }
 
     [Fact]
-    public void LoadFiles_DoesNothing_WhenPathDoesNotExist()
+    public void LoadInputSets_DoesNothing_WhenPathDoesNotExist()
     {
         var vm = BuildViewModel();
-        vm.LoadFiles(@"C:\DoesNotExist\missing.mp3");
+        vm.LoadInputSets(@"C:\DoesNotExist\missing");
         Assert.Empty(vm.Files);
     }
 
     [Fact]
-    public void LoadFiles_PopulatesFiles_FromFolder()
+    public void LoadInputSets_PopulatesMultipleFiles_FromFolder()
     {
         var vm = BuildViewModel();
-        var dir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-        Directory.CreateDirectory(dir);
-        var f1 = Path.Combine(dir, "a.mp3");
-        var f2 = Path.Combine(dir, "b.wav");
+        var dir = CreateTempDir();
         try
         {
-            File.WriteAllBytes(f1, []);
-            File.WriteAllBytes(f2, []);
-            vm.LoadFiles(dir);
+            CreateFile(dir, "a.mp3");
+            CreateFile(dir, "b.wav");
+            vm.LoadInputSets(dir);
             Assert.Equal(2, vm.Files.Count);
         }
-        finally
-        {
-            Directory.Delete(dir, recursive: true);
-        }
+        finally { Directory.Delete(dir, recursive: true); }
     }
 
     [Fact]
-    public void LoadFiles_ResetsCounters()
+    public void LoadInputSets_ResetsCounters()
     {
         var vm = BuildViewModel();
-        var path = CreateTempAudioFile("reset.mp3");
+        var dir = CreateTempDir();
         try
         {
-            vm.LoadFiles(path);
+            CreateFile(dir, "reset.mp3");
+            vm.LoadInputSets(dir);
             Assert.Equal(0, vm.CompletedCount);
             Assert.Equal(0, vm.SkippedCount);
             Assert.Equal(0, vm.FailedCount);
         }
-        finally
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public void LoadInputSets_IgnoresNonAudioAndNonPhosFiles()
+    {
+        var vm = BuildViewModel();
+        var dir = CreateTempDir();
+        try
         {
-            File.Delete(path);
+            CreateFile(dir, "notes.txt");
+            CreateFile(dir, "image.png");
+            vm.LoadInputSets(dir);
+            Assert.Empty(vm.Files);
         }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public void LoadInputSets_SetsAudioPath_ToAudioFilePath()
+    {
+        var vm = BuildViewModel();
+        var dir = CreateTempDir();
+        try
+        {
+            var audioPath = CreateFile(dir, "voice.mp3");
+            vm.LoadInputSets(dir);
+            Assert.Equal(audioPath, vm.Files[0].AudioPath);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
     }
 
     // -------------------------------------------------------------------------
-    // TrainFileItem display helper
+    // LoadInputSets — .phos companion detection
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void LoadInputSets_SetsTranscriptionPath_WhenPhosFileExists()
+    {
+        var vm = BuildViewModel();
+        var dir = CreateTempDir();
+        try
+        {
+            CreateFile(dir, "voice.mp3");
+            var phosPath = CreateFile(dir, "voice.phos");
+            vm.LoadInputSets(dir);
+            Assert.Equal(phosPath, vm.Files[0].TranscriptionPath);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public void LoadInputSets_SetsTranscriptionPathToEmpty_WhenNoPhosFile()
+    {
+        var vm = BuildViewModel();
+        var dir = CreateTempDir();
+        try
+        {
+            CreateFile(dir, "voice.mp3");
+            vm.LoadInputSets(dir);
+            Assert.Equal(string.Empty, vm.Files[0].TranscriptionPath);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public void LoadInputSets_CreatesItem_ForPhosFileWithoutAudio()
+    {
+        var vm = BuildViewModel();
+        var dir = CreateTempDir();
+        try
+        {
+            CreateFile(dir, "orphan.phos");
+            vm.LoadInputSets(dir);
+            Assert.Single(vm.Files);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public void LoadInputSets_PhosOnlyItem_HasEmptyAudioPath()
+    {
+        var vm = BuildViewModel();
+        var dir = CreateTempDir();
+        try
+        {
+            CreateFile(dir, "orphan.phos");
+            vm.LoadInputSets(dir);
+            Assert.Equal(string.Empty, vm.Files[0].AudioPath);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public void LoadInputSets_PhosOnlyItem_HasTranscriptionPath()
+    {
+        var vm = BuildViewModel();
+        var dir = CreateTempDir();
+        try
+        {
+            var phosPath = CreateFile(dir, "orphan.phos");
+            vm.LoadInputSets(dir);
+            Assert.Equal(phosPath, vm.Files[0].TranscriptionPath);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public void LoadInputSets_PhosOnlyItem_ShowsPhosFileName()
+    {
+        var vm = BuildViewModel();
+        var dir = CreateTempDir();
+        try
+        {
+            CreateFile(dir, "orphan.phos");
+            vm.LoadInputSets(dir);
+            Assert.Equal("orphan", vm.Files[0].FileName);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public void LoadInputSets_AudioAndPhosSameStem_ProducesSingleRow()
+    {
+        var vm = BuildViewModel();
+        var dir = CreateTempDir();
+        try
+        {
+            CreateFile(dir, "voice.mp3");
+            CreateFile(dir, "voice.phos");
+            vm.LoadInputSets(dir);
+            Assert.Single(vm.Files);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public void LoadInputSets_MixedStems_ProducesCorrectRowCount()
+    {
+        var vm = BuildViewModel();
+        var dir = CreateTempDir();
+        try
+        {
+            CreateFile(dir, "a.mp3");   // has audio only
+            CreateFile(dir, "b.mp3");   // has audio + phos
+            CreateFile(dir, "b.phos");
+            CreateFile(dir, "c.phos");  // has phos only
+            vm.LoadInputSets(dir);
+            Assert.Equal(3, vm.Files.Count);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public void LoadInputSets_MatchesPhosFile_BySameBaseNameInSameDirectory()
+    {
+        var vm = BuildViewModel();
+        var dir = CreateTempDir();
+        try
+        {
+            CreateFile(dir, "a.mp3");
+            CreateFile(dir, "a.phos");
+            CreateFile(dir, "b.wav");   // no b.phos
+            vm.LoadInputSets(dir);
+
+            var itemA = vm.Files.Single(f => f.FileName == "a");
+            var itemB = vm.Files.Single(f => f.FileName == "b");
+
+            Assert.NotEmpty(itemA.TranscriptionPath);
+            Assert.Empty(itemB.TranscriptionPath);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    // -------------------------------------------------------------------------
+    // TrainFileItem — AudioExtension
+    // -------------------------------------------------------------------------
+
+    [Theory]
+    [InlineData(@"C:\audio\voice.mp3", ".mp3")]
+    [InlineData(@"C:\audio\voice.wav", ".wav")]
+    [InlineData(@"C:\audio\voice.FLAC", ".FLAC")]
+    public void TrainFileItem_AudioExtension_ReturnsFileExtension(string path, string expected)
+    {
+        var item = new TrainFileItem { AudioPath = path };
+        Assert.Equal(expected, item.AudioExtension);
+    }
+
+    [Fact]
+    public void TrainFileItem_AudioExtension_IsEmpty_WhenAudioPathIsEmpty()
+    {
+        var item = new TrainFileItem();
+        Assert.Equal(string.Empty, item.AudioExtension);
+    }
+
+    [Fact]
+    public void TrainFileItem_AudioExtension_RaisesPropertyChanged_WhenAudioPathChanges()
+    {
+        var item = new TrainFileItem();
+        var raised = false;
+        item.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(item.AudioExtension)) raised = true;
+        };
+
+        item.AudioPath = @"C:\audio\new.wav";
+
+        Assert.True(raised);
+    }
+
+    // -------------------------------------------------------------------------
+    // TrainFileItem — TranscriptionStatus
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void TrainFileItem_TranscriptionStatus_IsOk_WhenTranscriptionPathIsSet()
+    {
+        var item = new TrainFileItem { TranscriptionPath = @"C:\data\voice.phos" };
+        Assert.Equal("OK", item.TranscriptionStatus);
+    }
+
+    [Fact]
+    public void TrainFileItem_TranscriptionStatus_IsEmpty_WhenTranscriptionPathIsEmpty()
+    {
+        var item = new TrainFileItem();
+        Assert.Equal(string.Empty, item.TranscriptionStatus);
+    }
+
+    [Fact]
+    public void TrainFileItem_TranscriptionStatus_RaisesPropertyChanged_WhenTranscriptionPathChanges()
+    {
+        var item = new TrainFileItem();
+        var raised = false;
+        item.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(item.TranscriptionStatus)) raised = true;
+        };
+
+        item.TranscriptionPath = @"C:\data\voice.phos";
+
+        Assert.True(raised);
+    }
+
+    // -------------------------------------------------------------------------
+    // TrainFileItem — FileSizeDisplay
     // -------------------------------------------------------------------------
 
     [Theory]
@@ -186,10 +414,11 @@ public class TrainViewModelTests
     public async Task StartTrainingCommand_SetsIsTrainingDuringExecution()
     {
         var vm = BuildViewModel();
-        var path = CreateTempAudioFile("train.mp3");
+        var dir = CreateTempDir();
         try
         {
-            vm.LoadFiles(path);
+            CreateFile(dir, "train.mp3");
+            vm.LoadInputSets(dir);
             bool wasTrainingDuringRun = false;
             vm.PropertyChanged += (_, e) =>
             {
@@ -201,78 +430,67 @@ public class TrainViewModelTests
 
             Assert.True(wasTrainingDuringRun);
         }
-        finally
-        {
-            File.Delete(path);
-        }
+        finally { Directory.Delete(dir, recursive: true); }
     }
 
     [Fact]
     public async Task StartTrainingCommand_IsTrainingIsFalse_AfterCompletion()
     {
         var vm = BuildViewModel();
-        var path = CreateTempAudioFile("done.mp3");
+        var dir = CreateTempDir();
         try
         {
-            vm.LoadFiles(path);
+            CreateFile(dir, "done.mp3");
+            vm.LoadInputSets(dir);
             await vm.StartTrainingCommand.ExecuteAsync(null);
             Assert.False(vm.IsTraining);
         }
-        finally
-        {
-            File.Delete(path);
-        }
+        finally { Directory.Delete(dir, recursive: true); }
     }
 
     [Fact]
     public async Task StartTrainingCommand_IncrementsCompletedCount()
     {
         var vm = BuildViewModel();
-        var path = CreateTempAudioFile("count.mp3");
+        var dir = CreateTempDir();
         try
         {
-            vm.LoadFiles(path);
+            CreateFile(dir, "count.mp3");
+            vm.LoadInputSets(dir);
             await vm.StartTrainingCommand.ExecuteAsync(null);
             Assert.Equal(1, vm.CompletedCount);
         }
-        finally
-        {
-            File.Delete(path);
-        }
+        finally { Directory.Delete(dir, recursive: true); }
     }
 
     [Fact]
     public async Task StartTrainingCommand_SetsOverallProgressToOne_AfterCompletion()
     {
         var vm = BuildViewModel();
-        var path = CreateTempAudioFile("progress.mp3");
+        var dir = CreateTempDir();
         try
         {
-            vm.LoadFiles(path);
+            CreateFile(dir, "progress.mp3");
+            vm.LoadInputSets(dir);
             await vm.StartTrainingCommand.ExecuteAsync(null);
             Assert.Equal(1.0, vm.OverallProgress);
         }
-        finally
-        {
-            File.Delete(path);
-        }
+        finally { Directory.Delete(dir, recursive: true); }
     }
 
     [Fact]
     public async Task StartTrainingCommand_SetsFilesStatusToDone_AfterCompletion()
     {
         var vm = BuildViewModel();
-        var path = CreateTempAudioFile("status.mp3");
+        var dir = CreateTempDir();
         try
         {
-            vm.LoadFiles(path);
+            CreateFile(dir, "status.mp3");
+            vm.LoadInputSets(dir);
             await vm.StartTrainingCommand.ExecuteAsync(null);
             Assert.Equal("Done", vm.Files[0].Status);
         }
-        finally
-        {
-            File.Delete(path);
-        }
+        finally { Directory.Delete(dir, recursive: true); }
     }
 
     [Fact]
@@ -285,28 +503,8 @@ public class TrainViewModelTests
     }
 
     // -------------------------------------------------------------------------
-    // BrowseFile / BrowseFolder interaction delegates
+    // BrowseFolder interaction delegate
     // -------------------------------------------------------------------------
-
-    [Fact]
-    public async Task BrowseFileCommand_InvokesInteraction_WhenAssigned()
-    {
-        var vm = BuildViewModel();
-        bool invoked = false;
-        vm.BrowseFileInteraction = () => { invoked = true; return Task.CompletedTask; };
-
-        await vm.BrowseFileCommand.ExecuteAsync(null);
-
-        Assert.True(invoked);
-    }
-
-    [Fact]
-    public async Task BrowseFileCommand_DoesNotThrow_WhenInteractionIsNull()
-    {
-        var vm = BuildViewModel();
-        // Should not throw
-        await vm.BrowseFileCommand.ExecuteAsync(null);
-    }
 
     [Fact]
     public async Task BrowseFolderCommand_InvokesInteraction_WhenAssigned()
@@ -332,14 +530,25 @@ public class TrainViewModelTests
     // Helpers
     // -------------------------------------------------------------------------
 
-    private static TrainViewModel BuildViewModel() =>
-        new(new ConfigService());
+    private static TrainViewModel BuildViewModel() => new(new ConfigService());
 
-    /// <summary>Creates an empty temporary file with the given name and returns its full path.</summary>
-    private static string CreateTempAudioFile(string fileName)
+    /// <summary>Creates a uniquely-named temporary directory and returns its path.</summary>
+    private static string CreateTempDir()
     {
-        var path = Path.Combine(Path.GetTempPath(), fileName);
+        var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        Directory.CreateDirectory(path);
+        return path;
+    }
+
+    /// <summary>
+    /// Creates an empty file named <paramref name="fileName"/> inside <paramref name="dir"/>
+    /// and returns its full path.
+    /// </summary>
+    private static string CreateFile(string dir, string fileName)
+    {
+        var path = Path.Combine(dir, fileName);
         File.WriteAllBytes(path, []);
         return path;
     }
 }
+

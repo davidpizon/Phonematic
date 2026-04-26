@@ -10,11 +10,9 @@
             <TextBlock Text="Train Voice Model" FontSize="20" FontWeight="Bold" />
 
             <DockPanel>
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4">
-                    <Button Content="Browse File" Command="{Binding BrowseFileCommand}" />
-                    <Button Content="Browse Folder" Command="{Binding BrowseFolderCommand}" />
-                </StackPanel>
-                <TextBox Text="{Binding InputPath}" PlaceholderText="Enter file or folder path..."
+                <Button DockPanel.Dock="Right" Content="Browse Folder"
+                        Command="{Binding BrowseFolderCommand}" />
+                <TextBox Text="{Binding InputPath}" PlaceholderText="Enter folder path..."
                          Margin="0,0,8,0" />
             </DockPanel>
         </StackPanel>
@@ -60,19 +58,24 @@
             </StackPanel>
         </StackPanel>
 
-        <!-- Center: File list -->
-        <DataGrid ItemsSource="{Binding Files}"
-                  AutoGenerateColumns="False"
-                  IsReadOnly="True"
-                  Margin="0,8"
-                  GridLinesVisibility="Horizontal"
-                  BorderBrush="Gray" BorderThickness="1">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" Width="*" />
-                <DataGridTextColumn Header="Size" Binding="{Binding FileSizeDisplay}" Width="100" />
-                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="150" />
-            </DataGrid.Columns>
-        </DataGrid>
+        <!-- Center: Source Input file list -->
+        <StackPanel Margin="0,8,0,0" Spacing="4">
+            <TextBlock Text="Source Input" FontWeight="SemiBold" />
+            <DataGrid ItemsSource="{Binding Files}"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      CanUserResizeColumns="True"
+                      GridLinesVisibility="Horizontal"
+                      BorderBrush="Gray" BorderThickness="1">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Name" Binding="{Binding FileName}" Width="2*" />
+                    <DataGridTextColumn Header="Size" Binding="{Binding FileSizeDisplay}" Width="Auto" />
+                    <DataGridTextColumn Header="Audio" Binding="{Binding AudioExtension}" Width="Auto" />
+                    <DataGridTextColumn Header="Transcription" Binding="{Binding TranscriptionStatus}" Width="Auto" />
+                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="*" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </StackPanel>
     </DockPanel>
 
 </UserControl>
