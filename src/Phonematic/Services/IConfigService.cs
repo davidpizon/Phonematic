@@ -27,6 +27,12 @@ public interface IConfigService
     /// <summary>Gets the LLM model directory (<c>ModelsDirectory\llm</c>).</summary>
     string LlmModelsDirectory { get; }
 
+    /// <summary>Gets the acoustic model directory (<c>ModelsDirectory\acoustic</c>).</summary>
+    string AcousticModelsDirectory { get; }
+
+    /// <summary>Gets the voice models directory (<c>ModelsDirectory\voice_models</c>).</summary>
+    string VoiceModelsDirectory { get; }
+
     /// <summary>Gets the absolute path to the SQLite database file.</summary>
     string DatabasePath { get; }
 

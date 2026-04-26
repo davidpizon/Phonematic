@@ -19,6 +19,8 @@ public class DbContextTests : IDisposable
         _db.Database.EnsureCreated();
     }
 
+    private static CancellationToken CT => TestContext.Current.CancellationToken;
+
     public void Dispose()
     {
         _db.Database.CloseConnection();
@@ -41,9 +43,9 @@ public class DbContextTests : IDisposable
         };
 
         _db.ProcessedFiles.Add(file);
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesAsync(CT);
 
-        var retrieved = await _db.ProcessedFiles.FirstAsync();
+        var retrieved = await _db.ProcessedFiles.FirstAsync(CT);
         Assert.Equal("/test/audio.mp3", retrieved.FilePath);
         Assert.Equal("abc123", retrieved.FileHash);
     }
@@ -72,10 +74,10 @@ public class DbContextTests : IDisposable
         };
 
         _db.ProcessedFiles.Add(file1);
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesAsync(CT);
 
         _db.ProcessedFiles.Add(file2);
-        await Assert.ThrowsAsync<DbUpdateException>(() => _db.SaveChangesAsync());
+        await Assert.ThrowsAsync<DbUpdateException>(() => _db.SaveChangesAsync(CT));
     }
 
     [Fact]
@@ -92,7 +94,7 @@ public class DbContextTests : IDisposable
         };
 
         _db.ProcessedFiles.Add(file);
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesAsync(CT);
 
         _db.TranscriptionChunks.Add(new TranscriptionChunk
         {
@@ -101,14 +103,14 @@ public class DbContextTests : IDisposable
             Text = "test chunk",
             Embedding = new byte[1536]
         });
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesAsync(CT);
 
-        Assert.Equal(1, await _db.TranscriptionChunks.CountAsync());
+        Assert.Equal(1, await _db.TranscriptionChunks.CountAsync(CT));
 
         _db.ProcessedFiles.Remove(file);
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesAsync(CT);
 
-        Assert.Equal(0, await _db.TranscriptionChunks.CountAsync());
+        Assert.Equal(0, await _db.TranscriptionChunks.CountAsync(CT));
     }
 
     [Fact]
@@ -135,8 +137,8 @@ public class DbContextTests : IDisposable
         };
 
         _db.ProcessedFiles.AddRange(file1, file2);
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesAsync(CT);
 
-        Assert.Equal(2, await _db.ProcessedFiles.CountAsync());
+        Assert.Equal(2, await _db.ProcessedFiles.CountAsync(CT));
     }
 }

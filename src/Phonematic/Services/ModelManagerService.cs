@@ -10,6 +10,7 @@ public class ModelManagerService : IModelManagerService
     private const string OnnxModelUrl = "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/onnx/model.onnx";
     private const string OnnxVocabUrl = "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/vocab.txt";
     private const string LlmModelUrl = "https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-gguf/resolve/main/Phi-3-mini-4k-instruct-q4.gguf";
+    private const string Wav2Vec2ModelUrl = "https://huggingface.co/facebook/wav2vec2-base-960h/resolve/main/onnx/model_quantized.onnx";
 
     private const int MaxRetryAttempts = 3;
 
@@ -32,7 +33,19 @@ public class ModelManagerService : IModelManagerService
         => File.Exists(GetLlmModelPath());
 
     public bool AreAllModelsReady(string whisperModelSize)
-        => IsWhisperModelDownloaded(whisperModelSize) && IsOnnxModelDownloaded() && IsLlmModelDownloaded();
+        => IsWhisperModelDownloaded(whisperModelSize) && IsOnnxModelDownloaded() && IsLlmModelDownloaded() && IsWav2Vec2ModelDownloaded();
+
+    public bool IsWav2Vec2ModelDownloaded()
+        => File.Exists(GetWav2Vec2ModelPath());
+
+    public string GetWav2Vec2ModelPath()
+        => Path.Combine(_config.AcousticModelsDirectory, "wav2vec2-phoneme.onnx");
+
+    public async Task DownloadWav2Vec2ModelAsync(IProgress<double>? progress = null, CancellationToken ct = default)
+    {
+        if (IsWav2Vec2ModelDownloaded()) return;
+        await DownloadFileAsync(Wav2Vec2ModelUrl, GetWav2Vec2ModelPath(), progress, ct);
+    }
 
     public string GetWhisperModelPath(string modelSize)
         => Path.Combine(_config.WhisperModelsDirectory, $"ggml-{modelSize}.bin");

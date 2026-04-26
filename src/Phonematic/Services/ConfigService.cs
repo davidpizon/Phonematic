@@ -38,6 +38,12 @@ public class ConfigService : IConfigService
     public string LlmModelsDirectory { get; }
 
     /// <inheritdoc/>
+    public string AcousticModelsDirectory { get; }
+
+    /// <inheritdoc/>
+    public string VoiceModelsDirectory { get; }
+
+    /// <inheritdoc/>
     public string DatabasePath { get; }
 
     /// <summary>Full path to the settings JSON file.</summary>
@@ -57,6 +63,8 @@ public class ConfigService : IConfigService
         WhisperModelsDirectory = Path.Combine(ModelsDirectory, "whisper");
         OnnxModelsDirectory = Path.Combine(ModelsDirectory, "onnx");
         LlmModelsDirectory = Path.Combine(ModelsDirectory, "llm");
+        AcousticModelsDirectory = Path.Combine(ModelsDirectory, "acoustic");
+        VoiceModelsDirectory = Path.Combine(ModelsDirectory, "voice_models");
         DatabasePath = Path.Combine(AppDataDirectory, "Phonematic.db");
 
         EnsureDirectories();
@@ -97,6 +105,8 @@ public class ConfigService : IConfigService
         Directory.CreateDirectory(WhisperModelsDirectory);
         Directory.CreateDirectory(OnnxModelsDirectory);
         Directory.CreateDirectory(LlmModelsDirectory);
+        Directory.CreateDirectory(AcousticModelsDirectory);
+        Directory.CreateDirectory(VoiceModelsDirectory);
     }
 
     }

@@ -22,6 +22,12 @@ public class PhonematicDbContext : DbContext
     /// <summary>Gets the set of recordings fetched from the PLAUD cloud API.</summary>
     public DbSet<PlaudRecording> PlaudRecordings => Set<PlaudRecording>();
 
+    /// <summary>Gets the set of user voice models.</summary>
+    public DbSet<VoiceModel> VoiceModels => Set<VoiceModel>();
+
+    /// <summary>Gets the set of (audio, transcript) training pairs associated with voice models.</summary>
+    public DbSet<TrainingPair> TrainingPairs => Set<TrainingPair>();
+
     private readonly string _dbPath;
 
     /// <summary>
@@ -102,6 +108,21 @@ public class PhonematicDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.PlaudFileId).IsUnique();
+        });
+
+        modelBuilder.Entity<VoiceModel>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Name);
+        });
+
+        modelBuilder.Entity<TrainingPair>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasOne(e => e.VoiceModel)
+                  .WithMany(m => m.TrainingPairs)
+                  .HasForeignKey(e => e.VoiceModelId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

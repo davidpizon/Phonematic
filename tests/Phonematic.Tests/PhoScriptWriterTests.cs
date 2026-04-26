@@ -96,7 +96,7 @@ public class PhoScriptWriterTests
     [Fact]
     public void Write_EmptySegments_ReturnsHeaderOnly()
     {
-        var result = PhoScriptWriter.Write([], "test.mp3");
+        var result = PhoScriptWriter.WriteLegacy([], "test.mp3");
         Assert.Contains("## PhoScript 1.0", result);
         Assert.DoesNotContain("<sentence", result);
     }
@@ -105,7 +105,7 @@ public class PhoScriptWriterTests
     public void Write_SingleSegment_ContainsSentenceBlock()
     {
         var seg = MakeSegment("hello world");
-        var result = PhoScriptWriter.Write([seg], "test.mp3");
+        var result = PhoScriptWriter.WriteLegacy([seg], "test.mp3");
         Assert.Contains("<sentence id=\"utt_001\"", result);
         Assert.Contains("</sentence>", result);
     }
@@ -114,7 +114,7 @@ public class PhoScriptWriterTests
     public void Write_UsesLfLineEndings()
     {
         var seg = MakeSegment("hello");
-        var result = PhoScriptWriter.Write([seg], "test.mp3");
+        var result = PhoScriptWriter.WriteLegacy([seg], "test.mp3");
         Assert.DoesNotContain("\r\n", result);
     }
 
@@ -122,7 +122,7 @@ public class PhoScriptWriterTests
     public void Write_ContainsWordBlocks()
     {
         var seg = MakeSegment("hello world");
-        var result = PhoScriptWriter.Write([seg], "test.mp3");
+        var result = PhoScriptWriter.WriteLegacy([seg], "test.mp3");
         Assert.Contains("<word orth=\"hello\"", result);
         Assert.Contains("<word orth=\"world\"", result);
     }
@@ -131,7 +131,7 @@ public class PhoScriptWriterTests
     public void Write_WordBlocksHavePhonChildren()
     {
         var seg = MakeSegment("cat");
-        var result = PhoScriptWriter.Write([seg], "test.mp3");
+        var result = PhoScriptWriter.WriteLegacy([seg], "test.mp3");
         Assert.Contains("<phon ipa=", result);
     }
 
@@ -139,7 +139,7 @@ public class PhoScriptWriterTests
     public void Write_PhonIpaAttributesUseSlashDelimiters()
     {
         var seg = MakeSegment("cat");
-        var result = PhoScriptWriter.Write([seg], "test.mp3");
+        var result = PhoScriptWriter.WriteLegacy([seg], "test.mp3");
         // Should contain ipa="/x/" pattern somewhere
         Assert.Matches(@"ipa=""\/[^/]+\/""", result);
     }
@@ -148,7 +148,7 @@ public class PhoScriptWriterTests
     public void Write_PhonTimestampsAreConsistent()
     {
         var seg = MakeSegment("cat", 0, 300);
-        var result = PhoScriptWriter.Write([seg], "test.mp3");
+        var result = PhoScriptWriter.WriteLegacy([seg], "test.mp3");
 
         // dur_ms must equal t_end - t_start on every phon line
         var phonLines = result.Split('\n')
@@ -161,7 +161,7 @@ public class PhoScriptWriterTests
     public void Write_LastWordHasIpEndBoundary()
     {
         var seg = MakeSegment("hello world");
-        var result = PhoScriptWriter.Write([seg], "test.mp3");
+        var result = PhoScriptWriter.WriteLegacy([seg], "test.mp3");
         Assert.Contains("phrase_boundary=\"IP_end\"", result);
     }
 
@@ -169,7 +169,7 @@ public class PhoScriptWriterTests
     public void Write_NonLastWordHasNoneBoundary()
     {
         var seg = MakeSegment("hello world");
-        var result = PhoScriptWriter.Write([seg], "test.mp3");
+        var result = PhoScriptWriter.WriteLegacy([seg], "test.mp3");
         Assert.Contains("phrase_boundary=\"none\"", result);
     }
 
@@ -177,7 +177,7 @@ public class PhoScriptWriterTests
     public void Write_SourceFileNameInMeta()
     {
         var seg = MakeSegment("hi");
-        var result = PhoScriptWriter.Write([seg], "my_recording.mp3");
+        var result = PhoScriptWriter.WriteLegacy([seg], "my_recording.mp3");
         Assert.Contains("recording_id=\"my_recording\"", result);
     }
 
@@ -189,7 +189,7 @@ public class PhoScriptWriterTests
             MakeSegment("hello", 0, 500),
             MakeSegment("world", 500, 1000),
         };
-        var result = PhoScriptWriter.Write(segs, "test.mp3");
+        var result = PhoScriptWriter.WriteLegacy(segs, "test.mp3");
         Assert.Contains("utt_001", result);
         Assert.Contains("utt_002", result);
     }

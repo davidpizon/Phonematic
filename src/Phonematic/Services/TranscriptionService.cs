@@ -111,7 +111,7 @@ public class TranscriptionService : ITranscriptionService, IDisposable
 
             progress?.Report(0.90);
 
-            var phosContent = PhoScriptWriter.Write(
+            var phosContent = PhoScriptWriter.WriteLegacy(
                 segments,
                 Path.GetFileName(audioPath));
 

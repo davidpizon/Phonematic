@@ -59,4 +59,18 @@ public interface IModelManagerService
     /// <param name="progress">Optional progress reporter.</param>
     /// <param name="ct">Cancellation token.</param>
     Task DownloadLlmModelAsync(IProgress<double>? progress = null, CancellationToken ct = default);
+
+    /// <summary>Returns <see langword="true"/> if the wav2vec2 phoneme ONNX model exists on disk.</summary>
+    bool IsWav2Vec2ModelDownloaded();
+
+    /// <summary>Returns the absolute path to <c>wav2vec2-phoneme.onnx</c>.</summary>
+    string GetWav2Vec2ModelPath();
+
+    /// <summary>
+    /// Downloads the wav2vec2 phoneme ONNX model (~95 MB int8 quantised) from HuggingFace
+    /// if not already present.
+    /// </summary>
+    /// <param name="progress">Optional progress reporter.</param>
+    /// <param name="ct">Cancellation token.</param>
+    Task DownloadWav2Vec2ModelAsync(IProgress<double>? progress = null, CancellationToken ct = default);
 }

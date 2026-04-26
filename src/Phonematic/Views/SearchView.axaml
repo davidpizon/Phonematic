@@ -17,7 +17,7 @@
                         IsEnabled="{Binding IsSearching}" />
             </StackPanel>
             <TextBox Text="{Binding QueryText}"
-                     Watermark="Ask a question about your transcriptions..."
+                     PlaceholderText="Ask a question about your transcriptions..."
                      Margin="0,0,8,0" />
         </DockPanel>
 

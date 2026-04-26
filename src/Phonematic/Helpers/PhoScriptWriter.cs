@@ -1,66 +1,193 @@
-using System.Text;
+using System.Xml;
+using Phonematic.Models;
 using Whisper.net;
 
 namespace Phonematic.Helpers;
 
 /// <summary>
-/// Serializes a collection of Whisper <see cref="SegmentData"/> results to
+/// Serializes speech analysis results to
 /// <see href="https://github.com/davidpizon/Phonematic/blob/main/docs/PHOSCRIPT.md">PhoScript 1.0</see>
 /// format (<c>.phos</c>).
 /// <para>
-/// Because Whisper provides segment-level timestamps and word text but no sub-phoneme
-/// acoustic measurements, all prosodic fields that require forced-alignment or signal
-/// analysis are omitted. Word-level timing is approximated by distributing each
-/// segment's duration uniformly across its constituent words, and phone-level timing
-/// is approximated by distributing each word's duration uniformly across its phones.
-/// Each phone is represented using IPA notation via <see cref="CmuDict"/> with
-/// <see cref="GraphemeToPhoneme"/> as a rule-based fallback.
-/// ASR confidence scores from Whisper tokens are recorded using the reserved
-/// <c>asr_*</c> extension namespace defined by the spec.
+/// Two overloads are provided:
+/// <list type="bullet">
+///   <item>
+///     <see cref="Write(IReadOnlyList{PhoneAlignment}, IReadOnlyList{AcousticFeatureFrame}, SpeakerBaseline, string, string, DateOnly?)"/>
+///     — the primary acoustic overload. Uses real per-frame measurements from
+///     <see cref="Phonematic.Services.AcousticFeatureExtractorService"/> to populate all
+///     prosodic fields of every <c>&lt;phon&gt;</c> element.
+///   </item>
+///   <item>
+///     <see cref="WriteLegacy"/> — the original Whisper-based fallback, retained for
+///     backwards compatibility. All prosodic fields are omitted and timing is approximated.
+///   </item>
+/// </list>
+/// </para>
+/// <para>
+/// Both methods use <see cref="XmlWriter"/> (from <c>System.Xml</c>) for all XML emission,
+/// which guarantees well-formed output and correct attribute-value escaping without any
+/// manual string replacement.
 /// </para>
 /// </summary>
 public static class PhoScriptWriter
 {
+    // Shared XmlWriterSettings — indent with two spaces, LF line endings, no XML declaration.
+    private static readonly XmlWriterSettings XmlSettings = new()
+    {
+        Indent = true,
+        IndentChars = "  ",
+        NewLineChars = "\n",
+        NewLineOnAttributes = false,
+        ConformanceLevel = ConformanceLevel.Fragment,
+        OmitXmlDeclaration = true,
+        CloseOutput = false,
+    };
+
+    // ------------------------------------------------------------------
+    // Acoustic overload (primary)
+    // ------------------------------------------------------------------
+
     /// <summary>
-    /// Builds a PhoScript document from the given segments and source file metadata.
+    /// Builds a fully-annotated PhoScript document from acoustic analysis results.
+    /// All <c>&lt;phon&gt;</c> elements carry real <c>f0_hz</c>, <c>intensity_db</c>,
+    /// <c>f0_contour</c>, <c>voice_quality</c>, and coarticulation attributes derived
+    /// from <paramref name="frames"/>. The <c>&lt;speaker&gt;</c> block is populated
+    /// from <paramref name="baseline"/>.
     /// </summary>
-    /// <param name="segments">Ordered list of Whisper segments.</param>
-    /// <param name="sourceFileName">Base name of the original audio file (used in <c>&lt;meta&gt;</c>).</param>
-    /// <param name="recordedDate">
-    /// Date to embed in the <c>&lt;meta&gt;</c> block. Defaults to today when <see langword="null"/>.
-    /// </param>
-    /// <returns>UTF-8 PhoScript document as a string (LF line endings, no BOM).</returns>
+    /// <param name="phones">Time-stamped phone sequence from CTC decoding.</param>
+    /// <param name="frames">Per-frame acoustic feature measurements.</param>
+    /// <param name="baseline">Speaker-level statistics used for relative calculations.</param>
+    /// <param name="sourceFileName">Base name of the source audio file.</param>
+    /// <param name="speakerId">Optional speaker identifier written into the <c>&lt;speaker&gt;</c> block.</param>
+    /// <param name="recordedDate">Recording date; defaults to today.</param>
+    /// <returns>UTF-8 PhoScript 1.0 document string with LF line endings, no BOM.</returns>
     public static string Write(
+        IReadOnlyList<PhoneAlignment> phones,
+        IReadOnlyList<AcousticFeatureFrame> frames,
+        SpeakerBaseline baseline,
+        string sourceFileName,
+        string speakerId = "spk_A",
+        DateOnly? recordedDate = null)
+    {
+        ArgumentNullException.ThrowIfNull(phones);
+        ArgumentNullException.ThrowIfNull(frames);
+        ArgumentNullException.ThrowIfNull(baseline);
+
+        var date = recordedDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var totalDurationMs = phones.Count > 0 ? phones[^1].TEndMs : 0;
+
+        using var sw = new StringWriter();
+
+        // PhoScript header comments — plain text, written before the XML body.
+        sw.WriteLine("## PhoScript 1.0 — generated by Phonematic (acoustic pipeline)");
+        sw.WriteLine($"## source: {sourceFileName}");
+        sw.WriteLine($"## generated: {DateTime.UtcNow:yyyy-MM-ddTHH:mm:ssZ}");
+        sw.WriteLine();
+
+        using (var xw = XmlWriter.Create(sw, XmlSettings))
+        {
+            xw.WriteStartElement("sentence");
+            xw.WriteAttributeString("id", "utt_001");
+            xw.WriteAttributeString("lang", "en-US");
+            xw.WriteAttributeString("duration_ms", totalDurationMs.ToString());
+
+            xw.WriteStartElement("meta");
+            xw.WriteAttributeString("recording_id", Path.GetFileNameWithoutExtension(sourceFileName));
+            xw.WriteAttributeString("date", date.ToString("yyyy-MM-dd"));
+            xw.WriteAttributeString("asr_model", "wav2vec2-phoneme");
+            xw.WriteEndElement(); // </meta>
+
+            xw.WriteStartElement("speaker");
+            xw.WriteAttributeString("id", speakerId);
+            xw.WriteAttributeString("f0_mean_hz", baseline.F0MeanHz.ToString("F1"));
+            xw.WriteAttributeString("f0_p10_hz", baseline.F0P10Hz.ToString("F1"));
+            xw.WriteAttributeString("f0_p90_hz", baseline.F0P90Hz.ToString("F1"));
+            xw.WriteAttributeString("intensity_mean_db", baseline.IntensityMeanDb.ToString("F1"));
+            xw.WriteAttributeString("rate_sps", baseline.RatePhonesPerSecond.ToString("F2"));
+            xw.WriteAttributeString("voice_quality", baseline.VoiceQuality);
+            xw.WriteEndElement(); // </speaker>
+
+            var words = GroupPhonesIntoWords(phones);
+            for (var w = 0; w < words.Count; w++)
+            {
+                var wordPhones = words[w];
+                var boundary = w == words.Count - 1 ? "IP_end" : "none";
+
+                xw.WriteStartElement("word");
+                xw.WriteAttributeString("orth", string.Empty);
+                xw.WriteAttributeString("t_start", wordPhones[0].TStartMs.ToString());
+                xw.WriteAttributeString("t_end", wordPhones[^1].TEndMs.ToString());
+                xw.WriteAttributeString("phrase_boundary", boundary);
+
+                for (var p = 0; p < wordPhones.Count; p++)
+                {
+                    WritePhon(xw, wordPhones[p], frames, baseline,
+                        prevPhone: p > 0 ? wordPhones[p - 1] : null,
+                        nextPhone: p < wordPhones.Count - 1 ? wordPhones[p + 1] : null);
+                }
+
+                xw.WriteEndElement(); // </word>
+            }
+
+            xw.WriteEndElement(); // </sentence>
+        }
+
+        sw.WriteLine();
+        return sw.ToString().Replace("\r\n", "\n");
+    }
+
+    // ------------------------------------------------------------------
+    // Legacy Whisper overload
+    // ------------------------------------------------------------------
+
+    /// <summary>
+    /// Builds a PhoScript document from Whisper segment data.
+    /// IPA symbols come from <see cref="CmuDict"/> / <see cref="GraphemeToPhoneme"/>;
+    /// prosodic measurement fields are omitted and timing is approximated.
+    /// </summary>
+    /// <remarks>
+    /// Prefer <see cref="Write(IReadOnlyList{PhoneAlignment}, IReadOnlyList{AcousticFeatureFrame}, SpeakerBaseline, string, string, DateOnly?)"/>
+    /// when acoustic analysis results are available.
+    /// </remarks>
+    public static string WriteLegacy(
         IReadOnlyList<SegmentData> segments,
         string sourceFileName,
         DateOnly? recordedDate = null)
     {
         var date = recordedDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
-        var sb = new StringBuilder();
+        var recordingId = Path.GetFileNameWithoutExtension(sourceFileName);
 
-        sb.AppendLine("## PhoScript 1.0 — generated by Phonematic");
-        sb.AppendLine($"## source: {sourceFileName}");
-        sb.AppendLine($"## generated: {DateTime.UtcNow:yyyy-MM-ddTHH:mm:ssZ}");
-        sb.AppendLine();
+        using var sw = new StringWriter();
 
-        for (var i = 0; i < segments.Count; i++)
+        // PhoScript header comments — plain text, written before the XML body.
+        sw.WriteLine("## PhoScript 1.0 — generated by Phonematic (Whisper legacy)");
+        sw.WriteLine($"## source: {sourceFileName}");
+        sw.WriteLine($"## generated: {DateTime.UtcNow:yyyy-MM-ddTHH:mm:ssZ}");
+        sw.WriteLine();
+
+        using (var xw = XmlWriter.Create(sw, XmlSettings))
         {
-            var seg = segments[i];
-            var sentenceId = $"utt_{i + 1:D3}";
-            var durationMs = (int)(seg.End - seg.Start).TotalMilliseconds;
-            var lang = string.IsNullOrWhiteSpace(seg.Language) ? "und" : seg.Language;
-
-            sb.AppendLine($"<sentence id=\"{sentenceId}\" lang=\"{lang}\" duration_ms=\"{durationMs}\">");
-            sb.AppendLine($"  <meta recording_id=\"{Path.GetFileNameWithoutExtension(sourceFileName)}\"");
-            sb.AppendLine($"        date=\"{date:yyyy-MM-dd}\"");
-            sb.AppendLine($"        asr_model=\"whisper\" asr_confidence=\"{seg.Probability:F4}\"/>");
-            sb.AppendLine();
-
-            var words = SplitWords(seg.Text.Trim());
-            if (words.Count > 0)
+            for (var i = 0; i < segments.Count; i++)
             {
+                var seg = segments[i];
+                var durationMs = (int)(seg.End - seg.Start).TotalMilliseconds;
+                var lang = string.IsNullOrWhiteSpace(seg.Language) ? "und" : seg.Language;
                 var segStartMs = (int)seg.Start.TotalMilliseconds;
-                var msPerWord = words.Count > 0 ? durationMs / words.Count : 0;
+
+                xw.WriteStartElement("sentence");
+                xw.WriteAttributeString("id", $"utt_{i + 1:D3}");
+                xw.WriteAttributeString("lang", lang);
+                xw.WriteAttributeString("duration_ms", durationMs.ToString());
+
+                xw.WriteStartElement("meta");
+                xw.WriteAttributeString("recording_id", recordingId);
+                xw.WriteAttributeString("date", date.ToString("yyyy-MM-dd"));
+                xw.WriteAttributeString("asr_model", "whisper");
+                xw.WriteAttributeString("asr_confidence", seg.Probability.ToString("F4"));
+                xw.WriteEndElement(); // </meta>
+
+                var words = SplitWords(seg.Text.Trim());
+                var msPerWord = durationMs / Math.Max(words.Count, 1);
 
                 for (var w = 0; w < words.Count; w++)
                 {
@@ -68,46 +195,255 @@ public static class PhoScriptWriter
                     var wordEnd = w < words.Count - 1
                         ? segStartMs + (w + 1) * msPerWord
                         : segStartMs + durationMs;
-                    var isLast = w == words.Count - 1;
-                    var boundary = isLast ? "IP_end" : "none";
+                    var boundary = w == words.Count - 1 ? "IP_end" : "none";
                     var wordDurMs = wordEnd - wordStart;
+                    var ipaPhones = GetIpaPhones(words[w]);
+                    var msPerPhone = ipaPhones.Count > 0 ? wordDurMs / ipaPhones.Count : 0;
 
-                    var phones = GetIpaPhones(words[w]);
+                    xw.WriteStartElement("word");
+                    xw.WriteAttributeString("orth", words[w]);
+                    xw.WriteAttributeString("t_start", wordStart.ToString());
+                    xw.WriteAttributeString("t_end", wordEnd.ToString());
+                    xw.WriteAttributeString("phrase_boundary", boundary);
 
-                    sb.AppendLine($"  <word orth=\"{Escape(words[w])}\"");
-                    sb.AppendLine($"        t_start=\"{wordStart}\" t_end=\"{wordEnd}\"");
-                    sb.AppendLine($"        phrase_boundary=\"{boundary}\">");
-
-                    var msPerPhone = phones.Count > 0 ? wordDurMs / phones.Count : 0;
-                    for (var p = 0; p < phones.Count; p++)
+                    for (var p = 0; p < ipaPhones.Count; p++)
                     {
                         var phoneStart = wordStart + p * msPerPhone;
-                        var phoneEnd = p < phones.Count - 1
+                        var phoneEnd = p < ipaPhones.Count - 1
                             ? wordStart + (p + 1) * msPerPhone
                             : wordEnd;
-                        var phoneDur = phoneEnd - phoneStart;
 
-                        sb.AppendLine($"    <phon ipa=\"{phones[p]}\"");
-                        sb.AppendLine($"          t_start=\"{phoneStart}\" t_end=\"{phoneEnd}\" dur_ms=\"{phoneDur}\"/>");
+                        xw.WriteStartElement("phon");
+                        xw.WriteAttributeString("ipa", ipaPhones[p]);
+                        xw.WriteAttributeString("t_start", phoneStart.ToString());
+                        xw.WriteAttributeString("t_end", phoneEnd.ToString());
+                        xw.WriteAttributeString("dur_ms", (phoneEnd - phoneStart).ToString());
+                        xw.WriteEndElement(); // </phon>
                     }
 
-                    sb.AppendLine("  </word>");
+                    xw.WriteEndElement(); // </word>
                 }
-            }
 
-            sb.AppendLine();
-            sb.AppendLine("</sentence>");
-            sb.AppendLine();
+                xw.WriteEndElement(); // </sentence>
+            }
         }
 
-        // Normalise to LF as required by the spec
-        return sb.ToString().Replace("\r\n", "\n");
+        sw.WriteLine();
+        return sw.ToString().Replace("\r\n", "\n");
+    }
+
+    // ------------------------------------------------------------------
+    // Private helpers
+    // ------------------------------------------------------------------
+
+    /// <summary>
+    /// Writes a single <c>&lt;phon&gt;</c> element with all acoustic attributes.
+    /// Voiced-only attributes (<c>f0_*</c>) are only written when <c>f0Hz &gt; 0</c>.
+    /// All attribute-value escaping is handled automatically by <see cref="XmlWriter"/>.
+    /// </summary>
+    private static void WritePhon(
+        XmlWriter xw,
+        PhoneAlignment phone,
+        IReadOnlyList<AcousticFeatureFrame> frames,
+        SpeakerBaseline baseline,
+        PhoneAlignment? prevPhone,
+        PhoneAlignment? nextPhone)
+    {
+        var phoneFrames = GetFramesForPhone(phone, frames);
+
+        float f0Hz = 0, f0Onset = 0, f0Offset = 0, f0RelSt = 0, f0RateSt = 0;
+        float intensityDb = 0, intensityRel = 0;
+        var f0Contour = "na";
+        var voiceQuality = "modal";
+
+        if (phoneFrames.Count > 0)
+        {
+            intensityDb = phoneFrames.Average(fr => fr.RmsDb);
+            intensityRel = intensityDb - baseline.IntensityMeanDb;
+
+            var voicedFrames = phoneFrames.Where(fr => fr.IsVoiced).ToList();
+            if (voicedFrames.Count > 0)
+            {
+                f0Hz = voicedFrames.Average(fr => fr.F0Hz);
+                f0Onset = voicedFrames.First().F0Hz;
+                f0Offset = voicedFrames.Last().F0Hz;
+
+                if (baseline.F0MeanHz > 0 && f0Hz > 0)
+                    f0RelSt = 12f * MathF.Log2(f0Hz / baseline.F0MeanHz);
+
+                f0Contour = ClassifyContour(voicedFrames);
+                f0RateSt = ComputeF0RateStPerMs(voicedFrames, phone.DurMs);
+                voiceQuality = ClassifyVoiceQuality(voicedFrames);
+            }
+        }
+
+        xw.WriteStartElement("phon");
+        xw.WriteAttributeString("ipa", phone.IpaSymbol);
+        xw.WriteAttributeString("t_start", phone.TStartMs.ToString());
+        xw.WriteAttributeString("t_end", phone.TEndMs.ToString());
+        xw.WriteAttributeString("dur_ms", phone.DurMs.ToString());
+
+        if (f0Hz > 0)
+        {
+            xw.WriteAttributeString("f0_hz", f0Hz.ToString("F1"));
+            xw.WriteAttributeString("f0_rel_st", f0RelSt.ToString("+0.00;-0.00;0"));
+            xw.WriteAttributeString("f0_onset_hz", f0Onset.ToString("F1"));
+            xw.WriteAttributeString("f0_offset_hz", f0Offset.ToString("F1"));
+            xw.WriteAttributeString("f0_contour", f0Contour);
+            xw.WriteAttributeString("f0_rate_st_per_ms", f0RateSt.ToString("F4"));
+        }
+
+        xw.WriteAttributeString("intensity_db", intensityDb.ToString("F1"));
+        xw.WriteAttributeString("intensity_rel", intensityRel.ToString("+0.0;-0.0;0"));
+        xw.WriteAttributeString("voice_quality", voiceQuality);
+        xw.WriteAttributeString("coart_lead", ClassifyCoartLead(nextPhone));
+        xw.WriteAttributeString("coart_lag", ClassifyCoartLag(prevPhone));
+        xw.WriteEndElement(); // </phon>
     }
 
     /// <summary>
+    /// Groups a flat phone sequence into word-level lists using a pause-gap heuristic:
+    /// a gap &gt;= 80 ms between adjacent phones is treated as a word boundary.
+    /// </summary>
+    internal static List<List<PhoneAlignment>> GroupPhonesIntoWords(
+        IReadOnlyList<PhoneAlignment> phones)
+    {
+        const int wordBoundaryGapMs = 80;
+        var words = new List<List<PhoneAlignment>>();
+        if (phones.Count == 0) return words;
+
+        var current = new List<PhoneAlignment> { phones[0] };
+        for (var i = 1; i < phones.Count; i++)
+        {
+            var gap = phones[i].TStartMs - phones[i - 1].TEndMs;
+            if (gap >= wordBoundaryGapMs)
+            {
+                words.Add(current);
+                current = new List<PhoneAlignment>();
+            }
+            current.Add(phones[i]);
+        }
+        if (current.Count > 0)
+            words.Add(current);
+
+        return words;
+    }
+
+    /// <summary>Returns the subset of <paramref name="frames"/> whose centre falls within the phone's time range.</summary>
+    internal static List<AcousticFeatureFrame> GetFramesForPhone(
+        PhoneAlignment phone,
+        IReadOnlyList<AcousticFeatureFrame> frames)
+    {
+        return frames
+            .Where(fr =>
+            {
+                var centreMs = fr.FrameIndex * CtcDecoder.FrameShiftMs + CtcDecoder.FrameShiftMs / 2;
+                return centreMs >= phone.TStartMs && centreMs < phone.TEndMs;
+            })
+            .ToList();
+    }
+
+    /// <summary>
+    /// Classifies the F0 contour shape from the voiced-frame sequence.
+    /// Uses a least-squares linear fit and a midpoint deviation test.
+    /// </summary>
+    internal static string ClassifyContour(IReadOnlyList<AcousticFeatureFrame> voicedFrames)
+    {
+        if (voicedFrames.Count < 2) return "level";
+
+        var f0Values = voicedFrames.Select(f => (double)f.F0Hz).ToArray();
+        var n = f0Values.Length;
+        var xMean = (n - 1) / 2.0;
+        var yMean = f0Values.Average();
+        double sxy = 0, sxx = 0;
+        for (var i = 0; i < n; i++) { sxy += (i - xMean) * (f0Values[i] - yMean); sxx += (i - xMean) * (i - xMean); }
+        var slope = sxx > 0 ? sxy / sxx : 0;
+        var slopeSt = slope / Math.Max(yMean, 1.0);
+
+        var mid = f0Values[n / 2];
+        var midDeviation = (mid - yMean) / Math.Max(yMean, 1.0);
+
+        const double slopeThreshold = 0.003;
+        const double midThreshold = 0.04;
+
+        if (midDeviation > midThreshold) return slope > 0 ? "convex" : "rise-fall";
+        if (midDeviation < -midThreshold) return slope < 0 ? "concave" : "fall-rise";
+        if (slopeSt > slopeThreshold) return "rise";
+        if (slopeSt < -slopeThreshold) return "fall";
+        return "level";
+    }
+
+    /// <summary>Computes F0 rate of change in semitones per millisecond over the phone.</summary>
+    internal static float ComputeF0RateStPerMs(IReadOnlyList<AcousticFeatureFrame> voicedFrames, int durMs)
+    {
+        if (voicedFrames.Count < 2 || durMs <= 0) return 0f;
+        var f0Start = (float)voicedFrames.First().F0Hz;
+        var f0End = (float)voicedFrames.Last().F0Hz;
+        if (f0Start <= 0 || f0End <= 0) return 0f;
+        var deltaSt = 12f * MathF.Log2(f0End / f0Start);
+        return deltaSt / durMs;
+    }
+
+    /// <summary>Classifies voice quality from HNR of voiced frames.</summary>
+    internal static string ClassifyVoiceQuality(IReadOnlyList<AcousticFeatureFrame> voicedFrames)
+    {
+        if (voicedFrames.Count == 0) return "modal";
+        var medianHnr = Median(voicedFrames.Select(f => (double)f.HnrDb).ToArray());
+        return medianHnr switch
+        {
+            < 5.0 => "creaky",
+            < 12.0 => "breathy",
+            _ => "modal"
+        };
+    }
+
+    /// <summary>
+    /// Heuristic coarticulation leading-edge classification based on the identity of
+    /// the following phone.
+    /// </summary>
+    internal static string ClassifyCoartLead(PhoneAlignment? nextPhone)
+    {
+        if (nextPhone is null) return "none";
+        var ipa = nextPhone.IpaSymbol;
+        if (ipa is "/m/" or "/n/" or "/ŋ/" or "/m̩/" or "/n̩/") return "nasalized";
+        if (ipa is "/ɹ/" or "/ɝ/" or "/ɚ/") return "rhotacized";
+        if (ipa is "/j/" or "/i/" or "/ɪ/") return "palatalized";
+        if (ipa is "/w/" or "/u/" or "/ʊ/") return "labialized";
+        return "none";
+    }
+
+    /// <summary>
+    /// Heuristic coarticulation lag classification based on the identity of the
+    /// preceding phone.
+    /// </summary>
+    internal static string ClassifyCoartLag(PhoneAlignment? prevPhone)
+    {
+        if (prevPhone is null) return "none";
+        var ipa = prevPhone.IpaSymbol;
+        if (ipa is "/m/" or "/n/" or "/ŋ/" or "/m̩/" or "/n̩/") return "nasalized";
+        if (ipa is "/ɹ/" or "/ɝ/" or "/ɚ/") return "rhotic-coloring";
+        if (ipa is "/l/" or "/l̩/") return "lateral-release";
+        if (ipa is "/s/" or "/z/" or "/ʃ/" or "/ʒ/") return "devoiced";
+        return "none";
+    }
+
+    /// <summary>Returns the median of an array of doubles (sorted in-place copy).</summary>
+    private static double Median(double[] values)
+    {
+        var sorted = (double[])values.Clone();
+        Array.Sort(sorted);
+        var n = sorted.Length;
+        return n % 2 == 0 ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2.0 : sorted[n / 2];
+    }
+
+    // ------------------------------------------------------------------
+    // Shared helpers (used by both overloads)
+    // ------------------------------------------------------------------
+
+    /// <summary>
     /// Returns the IPA phones for a single orthographic word as slash-delimited IPA
-    /// strings (e.g. <c>"/ɹ/"</c>). Looks up the CMU Pronouncing Dictionary first;
-    /// falls back to rule-based G2P for unknown words.
+    /// strings. Looks up the CMU Pronouncing Dictionary first; falls back to
+    /// rule-based G2P for unknown words.
     /// </summary>
     internal static List<string> GetIpaPhones(string word)
     {
@@ -117,11 +453,8 @@ public static class PhoScriptWriter
 
         var phones = new List<string>();
         foreach (var symbol in arpabet)
-        {
-            // G2P can return space-separated multi-phone tokens (e.g. "K S" for 'x')
             foreach (var part in symbol.Split(' ', StringSplitOptions.RemoveEmptyEntries))
                 phones.Add(ArpabetToIpa.Convert(part));
-        }
 
         return phones;
     }
@@ -131,7 +464,16 @@ public static class PhoScriptWriter
         text.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .ToList();
 
-    /// <summary>Escapes the minimal set of XML attribute characters.</summary>
+    /// <summary>
+    /// Escapes the minimal set of XML attribute characters.
+    /// <para>
+    /// This helper is retained for use in tests and any code that constructs raw XML
+    /// strings outside of <see cref="XmlWriter"/>. All internal XML emission now goes
+    /// through <see cref="XmlWriter"/>, which handles escaping automatically.
+    /// </para>
+    /// </summary>
     internal static string Escape(string value) =>
         value.Replace("&", "&amp;").Replace("\"", "&quot;").Replace("<", "&lt;").Replace(">", "&gt;");
 }
+
+

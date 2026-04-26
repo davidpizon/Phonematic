@@ -11,6 +11,8 @@ public class FileHasherTests : IDisposable
         _tempFile = Path.GetTempFileName();
     }
 
+    private static CancellationToken CT => TestContext.Current.CancellationToken;
+
     public void Dispose()
     {
         if (File.Exists(_tempFile))
@@ -22,8 +24,8 @@ public class FileHasherTests : IDisposable
     {
         File.WriteAllText(_tempFile, "hello world");
 
-        var hash1 = await FileHasher.ComputeSha256Async(_tempFile);
-        var hash2 = await FileHasher.ComputeSha256Async(_tempFile);
+        var hash1 = await FileHasher.ComputeSha256Async(_tempFile, CT);
+        var hash2 = await FileHasher.ComputeSha256Async(_tempFile, CT);
 
         Assert.Equal(hash1, hash2);
     }
@@ -33,10 +35,8 @@ public class FileHasherTests : IDisposable
     {
         File.WriteAllText(_tempFile, "hello world");
 
-        var hash = await FileHasher.ComputeSha256Async(_tempFile);
+        var hash = await FileHasher.ComputeSha256Async(_tempFile, CT);
 
-        // Known SHA-256 of "hello world" (with no trailing newline... but WriteAllText may vary)
-        // Just verify it's a valid hex string of correct length
         Assert.Equal(64, hash.Length);
         Assert.Matches("^[0-9a-f]{64}$", hash);
     }
@@ -45,10 +45,10 @@ public class FileHasherTests : IDisposable
     public async Task ComputeSha256Async_DifferentContentGivesDifferentHash()
     {
         File.WriteAllText(_tempFile, "content A");
-        var hashA = await FileHasher.ComputeSha256Async(_tempFile);
+        var hashA = await FileHasher.ComputeSha256Async(_tempFile, CT);
 
         File.WriteAllText(_tempFile, "content B");
-        var hashB = await FileHasher.ComputeSha256Async(_tempFile);
+        var hashB = await FileHasher.ComputeSha256Async(_tempFile, CT);
 
         Assert.NotEqual(hashA, hashB);
     }
@@ -58,7 +58,7 @@ public class FileHasherTests : IDisposable
     {
         File.WriteAllText(_tempFile, "");
 
-        var hash = await FileHasher.ComputeSha256Async(_tempFile);
+        var hash = await FileHasher.ComputeSha256Async(_tempFile, CT);
 
         Assert.Equal(64, hash.Length);
         Assert.Matches("^[0-9a-f]{64}$", hash);

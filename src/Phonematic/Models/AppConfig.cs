@@ -64,4 +64,18 @@ public class AppConfig
     /// pre-populate the file list. Empty string when no import has occurred.
     /// </summary>
     public string LastImportPath { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Active transcription backend. <c>"acoustic"</c> uses the wav2vec2 pipeline;
+    /// <c>"whisper"</c> uses the legacy Whisper pipeline. Defaults to <c>"acoustic"</c>
+    /// once the wav2vec2 model is downloaded; falls back to <c>"whisper"</c> when the
+    /// acoustic model is absent.
+    /// </summary>
+    public string TranscriptionBackend { get; set; } = "acoustic";
+
+    /// <summary>
+    /// When <see langword="true"/>, TorchSharp will attempt to use CUDA for voice model
+    /// training (requires <c>libtorch-cuda-12.8-win-x64</c>). Defaults to <see langword="false"/>.
+    /// </summary>
+    public bool UseGpuForTraining { get; set; } = false;
 }

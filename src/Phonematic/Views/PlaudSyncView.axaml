@@ -52,7 +52,7 @@
                     <TextBlock FontSize="12" FontWeight="SemiBold" Text="Or paste token manually:" />
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <TextBox Text="{Binding ManualToken}"
-                                 Watermark="Paste token here"
+                                 PlaceholderText="Paste token here"
                                  Width="400" FontSize="11" />
                         <Button Content="Use Token"
                                 Command="{Binding UseManualTokenCommand}" />

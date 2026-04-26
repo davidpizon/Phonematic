@@ -14,7 +14,7 @@
                     <Button Content="Browse File" Command="{Binding BrowseFileCommand}" />
                     <Button Content="Browse Folder" Command="{Binding BrowseFolderCommand}" />
                 </StackPanel>
-                <TextBox Text="{Binding InputPath}" Watermark="Enter file or folder path..."
+                <TextBox Text="{Binding InputPath}" PlaceholderText="Enter file or folder path..."
                          Margin="0,0,8,0" />
             </DockPanel>
         </StackPanel>
