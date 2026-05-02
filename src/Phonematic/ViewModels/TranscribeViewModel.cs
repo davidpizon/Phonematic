@@ -52,11 +52,6 @@ public partial class TranscribeViewModel : ViewModelBase
 
         // Restore last import path
         var config = _configService.Load();
-        if (!string.IsNullOrEmpty(config.LastImportPath) &&
-            (File.Exists(config.LastImportPath) || Directory.Exists(config.LastImportPath)))
-        {
-            LoadFiles(config.LastImportPath);
-        }
     }
 
     // Set by View code-behind to wire platform file dialogs
@@ -87,7 +82,6 @@ public partial class TranscribeViewModel : ViewModelBase
 
         // Save last import path
         var config = _configService.Load();
-        config.LastImportPath = path;
         _configService.Save(config);
 
         IEnumerable<string> audioFiles;

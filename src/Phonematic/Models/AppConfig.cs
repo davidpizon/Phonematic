@@ -60,12 +60,6 @@ public class AppConfig
     public int MaxConcurrentPlaudDownloads { get; set; } = 3;
 
     /// <summary>
-    /// Last file or folder path imported on the Transcribe tab. Restored on startup to
-    /// pre-populate the file list. Empty string when no import has occurred.
-    /// </summary>
-    public string LastImportPath { get; set; } = string.Empty;
-
-    /// <summary>
     /// Active transcription backend. <c>"acoustic"</c> uses the wav2vec2 pipeline;
     /// <c>"whisper"</c> uses the legacy Whisper pipeline. Defaults to <c>"acoustic"</c>
     /// once the wav2vec2 model is downloaded; falls back to <c>"whisper"</c> when the

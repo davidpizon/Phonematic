@@ -22,8 +22,6 @@ namespace Phonematic.ViewModels;
 /// </summary>
 public partial class TrainViewModel : ViewModelBase
 {
-    private readonly IConfigService _configService;
-
     /// <summary>Gets or sets the folder path the user has selected as training input.</summary>
     [ObservableProperty]
     private string _inputPath = string.Empty;
@@ -64,19 +62,9 @@ public partial class TrainViewModel : ViewModelBase
 
     /// <summary>
     /// Initialises a new instance of <see cref="TrainViewModel"/>.
-    /// Restores the last used folder from configuration if it still exists on disk.
     /// </summary>
-    /// <param name="configService">Application configuration service used to persist the last import path.</param>
-    public TrainViewModel(IConfigService configService)
+    public TrainViewModel()
     {
-        _configService = configService;
-
-        var config = _configService.Load();
-        if (!string.IsNullOrEmpty(config.LastImportPath) &&
-            Directory.Exists(config.LastImportPath))
-        {
-            LoadInputSets(config.LastImportPath);
-        }
     }
 
     // ---------------------------------------------------------------------------
@@ -93,10 +81,18 @@ public partial class TrainViewModel : ViewModelBase
     // Commands
     // ---------------------------------------------------------------------------
 
-    /// <summary>Opens a folder-picker so the user can select a folder of input sets for training.</summary>
+    /// <summary>
+    /// Clears the current source input list and opens a folder-picker so the user can
+    /// select a new folder of input sets for training.
+    /// The list is cleared immediately so stale entries are never visible while the
+    /// dialog is open. If the user cancels, the list remains empty.
+    /// </summary>
     [RelayCommand]
     private async Task BrowseFolderAsync()
     {
+        Files.Clear();
+        InputPath = string.Empty;
+
         if (BrowseFolderInteraction != null)
             await BrowseFolderInteraction();
     }
@@ -113,7 +109,6 @@ public partial class TrainViewModel : ViewModelBase
     /// Either or both may be present; the presence of each is reflected in
     /// <see cref="TrainFileItem.AudioExtension"/> and
     /// <see cref="TrainFileItem.TranscriptionStatus"/> respectively.
-    /// Saves <paramref name="folderPath"/> as the last import path in configuration.
     /// Does nothing when <paramref name="folderPath"/> does not exist on disk.
     /// </summary>
     /// <param name="folderPath">Absolute path to the folder to scan.</param>
@@ -123,16 +118,17 @@ public partial class TrainViewModel : ViewModelBase
         CompletedCount = 0;
         SkippedCount = 0;
         FailedCount = 0;
-        InputPath = folderPath;
-
-        var config = _configService.Load();
-        config.LastImportPath = folderPath;
-        _configService.Save(config);
 
         if (!Directory.Exists(folderPath))
             return;
 
-        var allFiles = Directory.GetFiles(folderPath, "*.*", SearchOption.AllDirectories);
+        var allFiles = Directory.GetFiles(folderPath, "*.*", new EnumerationOptions
+        {
+            RecurseSubdirectories = true,
+            IgnoreInaccessible = true,
+        });
+
+        InputPath = folderPath;
 
         // Index audio files by their stem key (directory + base name, case-insensitive).
         var audioByKey = allFiles
@@ -161,14 +157,14 @@ public partial class TrainViewModel : ViewModelBase
             phosByKey.TryGetValue(key, out var phosPath);
 
             // Prefer the audio file's name for display; fall back to the .phos file name.
-            var displayPath = audioPath ?? phosPath!;
-            var info = new FileInfo(displayPath);
+            //var displayPath = audioPath ?? phosPath!;
+            //var info = new FileInfo(displayPath);
 
             Files.Add(new TrainFileItem
             {
-                FilePath = displayPath,
-                FileName = Path.GetFileNameWithoutExtension(displayPath),
-                FileSizeBytes = info.Length,
+                AudioFilePath = audioPath != null ? new FileInfo(audioPath) : null,
+                TranscriptionFilePath = phosPath != null ? new FileInfo(phosPath) : null,
+                //FileSizeBytes = info.Length,
                 AudioPath = audioPath ?? string.Empty,
                 TranscriptionPath = phosPath ?? string.Empty,
                 Status = "Pending",
@@ -210,7 +206,7 @@ public partial class TrainViewModel : ViewModelBase
                 var item = Files[i];
                 OverallProgress = (double)i / Files.Count;
                 item.Status = "Processing...";
-                StatusText = $"Processing: {item.FileName}";
+                StatusText = $"Processing: {item.Name}";
                 CurrentFileProgress = 0;
 
                 try
@@ -251,15 +247,35 @@ public partial class TrainViewModel : ViewModelBase
 /// </summary>
 public partial class TrainFileItem : ObservableObject
 {
-    /// <summary>Gets or sets the absolute path to the audio file.</summary>
-    public string FilePath { get; set; } = string.Empty;
+    //[ObservableProperty]
+    public string Name { get
+        {
+            if (AudioFilePath != null)
+                return AudioFilePath.Name;
+            if (TranscriptionFilePath != null)
+                return TranscriptionFilePath.Name;
+            throw new InvalidOperationException("TrainFileItem must have at least an audio or transcription file.");
+        } 
+    }
 
-    /// <summary>Gets or sets the display name of this input set (file base name without extension).</summary>
-    [ObservableProperty]
-    private string _fileName = string.Empty;
+    public FileInfo? AudioFilePath {  get; set; }
+    public FileInfo? TranscriptionFilePath { get; set; }
+
+    /// <summary>Gets or sets the absolute path to the audio file.</summary>
+    public DirectoryInfo FilePath { get {
+            if (AudioFilePath != null)
+                return AudioFilePath.Directory!;
+            else if (TranscriptionFilePath != null)
+                return TranscriptionFilePath.Directory!;
+            else
+                throw new InvalidOperationException("TrainFileItem must have at least an audio or transcription file.");
+        }
+    }
 
     /// <summary>Gets or sets the raw size of the audio file in bytes.</summary>
-    public long FileSizeBytes { get; set; }
+    public long FileSizeBytes {
+        get { return AudioFilePath != null ? AudioFilePath.Length : 0; }
+    }
 
     /// <summary>Gets a human-readable file size string.</summary>
     public string FileSizeDisplay => FileSizeBytes switch

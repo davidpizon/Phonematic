@@ -108,5 +108,4 @@ public class ConfigService : IConfigService
         Directory.CreateDirectory(AcousticModelsDirectory);
         Directory.CreateDirectory(VoiceModelsDirectory);
     }
-
-    }
+}

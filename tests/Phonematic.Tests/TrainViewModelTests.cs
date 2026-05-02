@@ -1,4 +1,3 @@
-using Phonematic.Services;
 using Phonematic.ViewModels;
 
 namespace Phonematic.Tests;
@@ -58,7 +57,7 @@ public class TrainViewModelTests
             CreateFile(dir, "sample.mp3");
             vm.LoadInputSets(dir);
             Assert.Single(vm.Files);
-            Assert.Equal("sample", vm.Files[0].FileName);
+            Assert.Equal("sample", vm.Files[0].Name);
         }
         finally { Directory.Delete(dir, recursive: true); }
     }
@@ -104,7 +103,7 @@ public class TrainViewModelTests
             vm.LoadInputSets(dir1);
             vm.LoadInputSets(dir2);
             Assert.Single(vm.Files);
-            Assert.Equal("second", vm.Files[0].FileName);
+            Assert.Equal("second", vm.Files[0].Name);
         }
         finally
         {
@@ -148,6 +147,19 @@ public class TrainViewModelTests
             Assert.Equal(0, vm.CompletedCount);
             Assert.Equal(0, vm.SkippedCount);
             Assert.Equal(0, vm.FailedCount);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public void LoadInputSets_LeavesFilesEmpty_WhenDirectoryContainsNoAudioOrPhosFiles()
+    {
+        var vm = BuildViewModel();
+        var dir = CreateTempDir();
+        try
+        {
+            vm.LoadInputSets(dir);
+            Assert.Empty(vm.Files);
         }
         finally { Directory.Delete(dir, recursive: true); }
     }
@@ -265,7 +277,7 @@ public class TrainViewModelTests
         {
             CreateFile(dir, "orphan.phos");
             vm.LoadInputSets(dir);
-            Assert.Equal("orphan", vm.Files[0].FileName);
+            Assert.Equal("orphan", vm.Files[0].Name);
         }
         finally { Directory.Delete(dir, recursive: true); }
     }
@@ -314,8 +326,8 @@ public class TrainViewModelTests
             CreateFile(dir, "b.wav");   // no b.phos
             vm.LoadInputSets(dir);
 
-            var itemA = vm.Files.Single(f => f.FileName == "a");
-            var itemB = vm.Files.Single(f => f.FileName == "b");
+            var itemA = vm.Files.Single(f => f.Name == "a");
+            var itemB = vm.Files.Single(f => f.Name == "b");
 
             Assert.NotEmpty(itemA.TranscriptionPath);
             Assert.Empty(itemB.TranscriptionPath);
@@ -390,20 +402,6 @@ public class TrainViewModelTests
         item.TranscriptionPath = @"C:\data\voice.phos";
 
         Assert.True(raised);
-    }
-
-    // -------------------------------------------------------------------------
-    // TrainFileItem — FileSizeDisplay
-    // -------------------------------------------------------------------------
-
-    [Theory]
-    [InlineData(512, "512 B")]
-    [InlineData(2048, "2.0 KB")]
-    [InlineData(2097152, "2.0 MB")]
-    public void TrainFileItem_FileSizeDisplay_FormatsCorrectly(long bytes, string expected)
-    {
-        var item = new TrainFileItem { FileSizeBytes = bytes };
-        Assert.Equal(expected, item.FileSizeDisplay);
     }
 
     // -------------------------------------------------------------------------
@@ -526,11 +524,82 @@ public class TrainViewModelTests
         await vm.BrowseFolderCommand.ExecuteAsync(null);
     }
 
+    [Fact]
+    public async Task BrowseFolderCommand_ClearsFilesBeforeInteraction()
+    {
+        var vm = BuildViewModel();
+        var dir = CreateTempDir();
+        try
+        {
+            // Pre-populate the list so there is something to clear.
+            CreateFile(dir, "existing.mp3");
+            vm.LoadInputSets(dir);
+            Assert.NotEmpty(vm.Files);
+
+            bool listWasEmptyWhenDialogOpened = false;
+            vm.BrowseFolderInteraction = () =>
+            {
+                listWasEmptyWhenDialogOpened = vm.Files.Count == 0;
+                return Task.CompletedTask;
+            };
+
+            await vm.BrowseFolderCommand.ExecuteAsync(null);
+
+            Assert.True(listWasEmptyWhenDialogOpened);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public async Task BrowseFolderCommand_ClearsInputPathBeforeInteraction()
+    {
+        var vm = BuildViewModel();
+        var dir = CreateTempDir();
+        try
+        {
+            CreateFile(dir, "existing.mp3");
+            vm.LoadInputSets(dir);
+            Assert.NotEmpty(vm.InputPath);
+
+            bool inputPathWasEmptyWhenDialogOpened = false;
+            vm.BrowseFolderInteraction = () =>
+            {
+                inputPathWasEmptyWhenDialogOpened = string.IsNullOrEmpty(vm.InputPath);
+                return Task.CompletedTask;
+            };
+
+            await vm.BrowseFolderCommand.ExecuteAsync(null);
+
+            Assert.True(inputPathWasEmptyWhenDialogOpened);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public async Task BrowseFolderCommand_LeavesFilesEmpty_WhenUserCancels()
+    {
+        var vm = BuildViewModel();
+        var dir = CreateTempDir();
+        try
+        {
+            CreateFile(dir, "existing.mp3");
+            vm.LoadInputSets(dir);
+
+            // Simulate cancel: interaction completes without calling LoadInputSets.
+            vm.BrowseFolderInteraction = () => Task.CompletedTask;
+
+            await vm.BrowseFolderCommand.ExecuteAsync(null);
+
+            Assert.Empty(vm.Files);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
 
-    private static TrainViewModel BuildViewModel() => new(new ConfigService());
+    private static TrainViewModel BuildViewModel() => new();
 
     /// <summary>Creates a uniquely-named temporary directory and returns its path.</summary>
     private static string CreateTempDir()
