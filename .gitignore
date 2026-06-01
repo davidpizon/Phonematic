@@ -94,3 +94,6 @@ appsettings.*.json
 ## Crash dumps
 *.dmp
 core
+
+## Graphify — fully ignored (regenerated each session)
+graphify-out/

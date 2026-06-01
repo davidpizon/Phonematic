@@ -2,6 +2,8 @@
 
 > A text-based markup language for millisecond-accurate prosodic representation of spoken utterances.
 
+> **Academic basis:** The IPA representation conventions in this specification — slash-delimited phone tokens, Unicode NFD normalization, and diacritic attachment — follow the practices established in [POWSM25].
+
 See also:
 - [IPA_REFERENCE.md](IPA_REFERENCE.md) — full IPA symbol reference for values used in `ipa` attributes
 - [API.md](API.md) — `PhoScriptWriter` helper and related service APIs
@@ -47,7 +49,7 @@ PhoScript encodes a spoken sentence with enough fidelity that a speech synthesiz
 
 ## 2. Terminology
 
-> **A note on the atomic unit:** The spec deliberately avoids "grapheme" (a written character) and "phoneme" (an abstract mental category). The atom here is a **phon** — a single, bounded acoustic phone as it was realized in this utterance, represented in IPA. A phon is what was actually said, not what the language abstractly requires.
+> **A note on the atomic unit:** The spec deliberately avoids "grapheme" (a written character) and "phoneme" (an abstract mental category). The atom here is a **phon** — a single, bounded acoustic phone as it was realized in this utterance, represented in IPA. A phon is what was actually said, not what the language abstractly requires. This tripartite phone / phoneme / grapheme distinction is independently adopted in POWSM's unified multilingual speech model, which separates phone recognition, grapheme-to-phoneme, and phoneme-to-grapheme as distinct tasks over the same IPA token space.<sup>[POWSM25]</sup>
 
 | Term | Definition |
 |---|---|
@@ -221,6 +223,8 @@ Coarticulation captures the acoustic influence of neighboring phones — essenti
 | `coart_lead` | `nasalized`, `rounded`, `palatalized`, `pharyngealized`, `none` | Anticipatory influence from the following phone |
 | `coart_lag` | `rhotic-coloring`, `nasalized`, `rounded`, `devoiced`, `lateral-release`, `none` | Carryover influence from the preceding phone |
 
+The value vocabulary for both attributes is drawn from the PanPhon articulatory feature system, which represents each phone as a 24-dimensional binary feature vector (place, manner, voicing, nasality, etc.).<sup>[POWSM25]</sup> POWSM uses PanPhon as the basis for its Phonetic Feature Error Rate (PFER) metric, confirming its suitability as a cross-linguistic articulatory reference.
+
 ---
 
 ## 7. Pauses
@@ -287,7 +291,7 @@ f0_rel_st = 12 × log₂(f0_hz / f0_mean_hz)
 
 **Timestamp precision:** Integers in milliseconds. Sub-millisecond precision is not required; measurement error in forced alignment is typically ±5–10 ms.
 
-**IPA convention:** Phone strings in `ipa` attributes use slash-delimited IPA. Narrow transcription is optional; broad transcription is acceptable. Diacritics and modifiers follow the base symbol inside the slashes: `/pʰ/`, `/ɾ̃/`, `/r̥/`.
+**IPA convention:** Phone strings in `ipa` attributes use slash-delimited IPA. Narrow transcription is optional; broad transcription is acceptable. Diacritics and modifiers follow the base symbol inside the slashes: `/pʰ/`, `/ɾ̃/`, `/r̥/`. IPA sequences must be stored in Unicode NFD (Canonical Decomposition) so that composed characters are consistently decomposed into base + combining diacritic code points before comparison or indexing. These three conventions — slash delimiters, diacritic attachment, and NFD normalization — match the tokenization strategy used in POWSM's IPAPack++ training corpus and are essential for lossless round-trip serialization across platforms.<sup>[POWSM25]</sup>
 
 **Attribute ordering (non-normative):** `ipa`, then timestamps, then F0, then intensity, then contour, then voice quality, then coarticulation. Parsers must not depend on order.
 
@@ -420,3 +424,9 @@ The spec reserves three attribute namespaces for domain-specific extensions with
 ---
 
 *PhoScript 1.0 — specification document*
+
+---
+
+## References
+
+[POWSM25] Li, C.-J., Chang, K., Bharadwaj, S., Yeo, E., Choi, K., Zhu, J., Mortensen, D., & Watanabe, S. (2025). *POWSM: A Phonetic Open Whisper-Style Speech Foundation Model*. arXiv:2510.24992. https://arxiv.org/abs/2510.24992
