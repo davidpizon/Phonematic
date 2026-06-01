@@ -103,7 +103,7 @@ public void PercentageConverter_FormatsCorrectly(double input, string expected) 
 `ArpabetToIpa`, `CmuDict`, `GraphemeToPhoneme`, and `PhoScriptWriter` expose several `internal` methods (e.g. `GetIpaPhones`, `SplitWords`, `Escape`, `StripPunctuation`, `BareIpa`) that are tested directly. The main project exposes them to the test project via:
 
 ```csharp
-// src/Phonematic/Properties/AssemblyInfo.cs
+// src/Phonematic.Gui/Properties/AssemblyInfo.cs
 [assembly: InternalsVisibleTo("Phonematic.Tests")]
 ```
 

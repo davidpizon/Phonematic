@@ -23,7 +23,8 @@ On first run the application will download three AI model files (~500 MB total f
 ## Project Layout
 
 ```
-src/Phonematic/           ← Main Avalonia application
+src/Phonematic/           ← CLI project (Spectre.Console.Cli)
+src/Phonematic.Gui/       ← Main Avalonia application
 tests/Phonematic.Tests/   ← xUnit unit tests
 docs/                     ← Documentation (Markdown)
 ```
@@ -69,7 +70,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for a full description of layers and data
 
 - All schema changes must be done via EF Core migrations:
   ```bash
-  dotnet ef migrations add <MigrationName> --project src/Phonematic
+  dotnet ef migrations add <MigrationName> --project src/Phonematic.Gui
   ```
 - Never modify existing migration files.
 - Foreign keys should use cascade delete where appropriate.

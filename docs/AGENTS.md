@@ -50,7 +50,9 @@ Phonematic is a desktop application for creating exportable AI voice models that
 ```
 Phonematic/                    ← Solution root
 ├── src/
-│   └── Phonematic/            ← Main application project (Avalonia, .NET 10)
+│   ├── Phonematic/            ← CLI project (Spectre.Console.Cli, .NET 10)
+│   │   └── Program.cs         ← Entry point
+│   └── Phonematic.Gui/        ← Main application project (Avalonia, .NET 10)
 │       ├── App.axaml.cs       ← DI composition root and app bootstrap
 │       ├── Program.cs         ← Entry point, fatal error handling
 │       ├── Converters/        ← Avalonia IValueConverter implementations
@@ -66,7 +68,7 @@ Phonematic/                    ← Solution root
 └── docs/                      ← Project documentation (this folder)
 ```
 
-- Source code lives under the solution root at `C:\Users\david.pizon\source\repos\Phonematic\`.
+- Source code lives under the solution root at `C:\git\Phonematic\`.
 - Documentation lives in the `/docs` folder.
 
 ## Coding Standards
@@ -86,8 +88,8 @@ All services are registered in `App.axaml.cs → ConfigureServices`. Follow thes
 
 | Lifetime | Used for |
 |---|---|
-| `Singleton` | `IConfigService`, `IModelManagerService`, `TokenListenerService`, `IPlaudApiService`, all ViewModels |
-| `Transient` | `IFileTrackingService` |
+| `Singleton` | `IConfigService`, `IModelManagerService`, `IActiveVoiceModelService`, `TokenListenerService`, `IPlaudApiService`, `MainWindowViewModel` |
+| `Transient` | `IFileTrackingService`, per-tab ViewModels (`ModelViewModel`, `TranscribeViewModel`, `TranscriptionsViewModel`, `TrainViewModel`, `SearchViewModel`, `SettingsViewModel`, `PlaudSyncViewModel`) |
 | `Scoped / Factory` | `PhonematicDbContext` (via `AddDbContextFactory`) |
 
 ## Adding a New Service

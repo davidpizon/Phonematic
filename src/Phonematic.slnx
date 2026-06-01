@@ -1,4 +1,5 @@
 <Solution>
   <Project Path="../tests/Phonematic.Tests/Phonematic.Tests.csproj" />
   <Project Path="Phonematic.Gui/Phonematic.Gui.csproj" />
+  <Project Path="Phonematic/Phonematic.csproj" Id="c3babbca-34d0-4c14-9ab2-451d1e2500dd" />
 </Solution>

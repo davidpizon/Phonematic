@@ -64,7 +64,7 @@ See also:
 
 All services are composed in `App.axaml.cs → ConfigureServices`. The DI container is `Microsoft.Extensions.DependencyInjection` and the root `ServiceProvider` is stored in `App.Services`.
 
-ViewModels are registered as **singletons** and resolved directly from the container. Views receive their ViewModel via `DataContext` set in `App.OnFrameworkInitializationCompleted`.
+`MainWindowViewModel` is registered as a **singleton**. Per-tab ViewModels (`ModelViewModel`, `TranscribeViewModel`, `TranscriptionsViewModel`, `TrainViewModel`, `SearchViewModel`, `SettingsViewModel`, `PlaudSyncViewModel`) are registered as **transients** and resolved once during `OnFrameworkInitializationCompleted`. Views receive their ViewModel via `DataContext` set in `App.OnFrameworkInitializationCompleted`.
 
 ## Core Data Flow
 
