@@ -28,6 +28,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Phonematic\Phonematic.csproj" />
     <ProjectReference Include="..\..\src\Phonematic.Gui\Phonematic.Gui.csproj" />
   </ItemGroup>
 

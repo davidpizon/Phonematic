@@ -1,14 +1,41 @@
 # Architecture
 
-This document describes the high-level architecture of Phonematic — a local-first audio transcription and search desktop application built with Avalonia UI on .NET 10.
+This document describes the high-level architecture of Phonematic — a local-first audio
+transcription and search system on .NET 10, shipped as both an Avalonia UI desktop app and a
+headless command-line converter.
 
 See also:
 - [API.md](API.md) — full reference for all classes, interfaces, and records mentioned here
+- [CLI.md](CLI.md) — command-line interface usage, flags, and exit codes
 - [CHANGELOG.md](CHANGELOG.md) — history of all notable changes
 - [CONTRIBUTING.md](CONTRIBUTING.md) — development workflow and coding standards
 - [TESTING.md](TESTING.md) — test suite structure and patterns
 - [PHOSCRIPT.md](PHOSCRIPT.md) — PhoScript 1.0 specification (`.phos` output format produced by `PhoScriptWriter`)
 - [IPA_REFERENCE.md](IPA_REFERENCE.md) — IPA symbol reference used in PhoScript output
+
+## Solution Projects
+
+The solution (`src/Phonematic.slnx`) contains two product projects plus tests:
+
+| Project | Assembly | Role |
+|---|---|---|
+| `Phonematic` | `Phonematic.dll`/`.exe` | Headless **CLI** (`audio → .phos`) **and** the shared acoustic pipeline + config/model services |
+| `Phonematic.Gui` | `Phonematic.Gui.dll`/`.exe` | Avalonia desktop app (formerly the `Phonematic` project); references `Phonematic` |
+| `Phonematic.Tests` | `Phonematic.Tests.dll` | xUnit v3 test project; references both |
+
+The shared, model-agnostic acoustic code lives in the **`Phonematic`** console project:
+`AudioConverter`, `CtcDecoder`, `TimitToIpa`, the acoustic `PhoScriptWriter.Write` overload,
+`AcousticPhoneRecognizerService`, `AcousticFeatureExtractorService`, plus `ConfigService` and
+`ModelManagerService` (for locating/checking models). The Whisper-legacy IPA path —
+`CmuDict`, `GraphemeToPhoneme`, `ArpabetToIpa`, and `PhoScriptWriterLegacy.WriteLegacy` — stays
+in `Phonematic.Gui`, since the acoustic pipeline does not use it.
+
+The **CLI** is a stateless file→file converter: it does **not** write to SQLite or compute
+embeddings. Per file it runs `AudioConverter.ConvertToWavAsync` →
+`AcousticPhoneRecognizerService.RecognizeAsync` → `AcousticFeatureExtractorService` (frames +
+baseline) → `PhoScriptWriter.Write`. Argument parsing uses `System.CommandLine`; the progress
+bar uses `Spectre.Console` (rendered to stderr, with result paths on stdout). See
+[CLI.md](CLI.md) for flags and exit codes.
 
 ## Technology Stack
 

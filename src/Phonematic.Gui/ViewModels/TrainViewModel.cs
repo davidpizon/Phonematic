@@ -251,11 +251,11 @@ public partial class TrainFileItem : ObservableObject
     public string Name { get
         {
             if (AudioFilePath != null)
-                return AudioFilePath.Name;
+                return Path.GetFileNameWithoutExtension(AudioFilePath.Name);
             if (TranscriptionFilePath != null)
-                return TranscriptionFilePath.Name;
+                return Path.GetFileNameWithoutExtension(TranscriptionFilePath.Name);
             throw new InvalidOperationException("TrainFileItem must have at least an audio or transcription file.");
-        } 
+        }
     }
 
     public FileInfo? AudioFilePath {  get; set; }

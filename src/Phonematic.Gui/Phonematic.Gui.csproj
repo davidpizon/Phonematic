@@ -10,7 +10,9 @@
     <ApplicationIcon>Assets/app.ico</ApplicationIcon>
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>Phonematic</RootNamespace>
-    <AssemblyName>Phonematic</AssemblyName>
+    <!-- Assembly renamed to Phonematic.Gui so it can reference the Phonematic console
+         project (which now owns the shared services and produces Phonematic.dll). -->
+    <AssemblyName>Phonematic.Gui</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
@@ -61,6 +63,11 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Helpers\cmudict.dict" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Shared acoustic pipeline + config/model services live in the console project. -->
+    <ProjectReference Include="..\Phonematic\Phonematic.csproj" />
   </ItemGroup>
 
 </Project>

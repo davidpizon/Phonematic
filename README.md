@@ -54,10 +54,19 @@ For those who trust no one (we respect that):
 git clone https://github.com/davidpizon/Phonematic.git
 cd Phonematic
 dotnet build -c Release
-dotnet run --project src/Phonematic/Phonematic.csproj
+dotnet run --project src/Phonematic.Gui/Phonematic.Gui.csproj
 ```
 
 Requires .NET 10 SDK. Yes, we're living in the future.
+
+Prefer the terminal? There's a headless CLI too — point it at an audio file or a folder and it
+writes PhoScript (`.phos`) files:
+
+```bash
+dotnet run --project src/Phonematic/Phonematic.csproj -- ./recordings --recursive
+```
+
+See [docs/CLI.md](docs/CLI.md) for all flags and exit codes.
 
 ## First Run — Model Setup
 

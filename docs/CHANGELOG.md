@@ -8,6 +8,54 @@ All notable changes to Phonematic are documented here.
 
 ### Added
 
+#### Command-line interface (`Phonematic` console project)
+
+- **Headless audio→PhoScript CLI.** The `Phonematic` console project is now a real CLI that
+  converts a single audio file or a whole directory into `.phos` files using the acoustic
+  pipeline. It is a **stateless file→file converter** — it does not touch the SQLite database
+  or compute embeddings. See [CLI.md](CLI.md) for the full synopsis, flags, examples, and the
+  exit-code table.
+  - Single-file mode (`-o, --output <file>`) and directory mode (`--output-dir <dir>`,
+    `-r/--recursive` with subfolder mirroring); `-f/--overwrite` and `-q/--quiet` in both modes.
+  - Agent-friendly I/O: written `.phos` paths on **stdout**, progress bar + logs on **stderr**,
+    Ctrl-C cancellation, and exit codes `0` success / `1` runtime failure / `2` usage error /
+    `3` environment error (model missing — never auto-downloaded).
+- **New dependencies (justified):** `System.CommandLine` for argument parsing/help/version and
+  `Spectre.Console` for the progress bar. These are intentional additions under the `AGENTS.md`
+  "avoid new dependencies" guideline, since standards-compliant CLI parsing and progress
+  reporting are not reasonably hand-rolled. (The unused `Spectre.Console.Cli` placeholder
+  reference was removed.)
+
+#### Project restructure — shared acoustic pipeline
+
+- **Renamed the Avalonia app project to `Phonematic.Gui`** (assembly `Phonematic.Gui`) and moved
+  the shared, model-agnostic acoustic code into the `Phonematic` console project so both
+  products share one implementation:
+  - Helpers: `AudioConverter`, `CtcDecoder`, `TimitToIpa`, and the acoustic
+    `PhoScriptWriter.Write` overload.
+  - Services: `AcousticPhoneRecognizerService`, `AcousticFeatureExtractorService` (incl.
+    `ComputeSpeakerBaseline`), `ConfigService`/`IConfigService`,
+    `ModelManagerService`/`IModelManagerService`.
+  - Models: `AppConfig`, `PhoneAlignment`, `AcousticFeatureFrame`, `SpeakerBaseline`,
+    `PhoneRecognitionResult`.
+- The Whisper-legacy IPA path is **not** shared: the `WriteLegacy` overload was split out into
+  `PhoScriptWriterLegacy` in `Phonematic.Gui` (alongside `CmuDict`, `GraphemeToPhoneme`,
+  `ArpabetToIpa`), since the acoustic pipeline does not use it.
+- `Phonematic.Gui` now references `Phonematic` and resolves the migrated services through its
+  existing DI; GUI behaviour is unchanged.
+
+### Fixed
+
+- **`TrainFileItem.Name`** now returns the file's base name without its extension (e.g.
+  `sample`, not `sample.mp3`), matching the documented stem-based pairing of audio and `.phos`
+  files. Fixes four failing `TrainViewModelTests`.
+
+### Removed
+
+- Deleted the stale, unreferenced duplicate test directory `src/tests/Phonematic.Tests`
+  (an empty project file plus an out-of-date `PhoScriptWriterTests` copy). The canonical test
+  project remains `tests/Phonematic.Tests`.
+
 #### Acoustic Pipeline — new services and models
 
 - **`AcousticFeatureExtractorService`** (`Services/AcousticFeatureExtractorService.cs`)  

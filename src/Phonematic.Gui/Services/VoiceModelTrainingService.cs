@@ -285,7 +285,7 @@ public sealed class VoiceModelTrainingService : IVoiceModelTrainingService
         var labelList = new List<int>();
         foreach (var word in words)
         {
-            var ipaPhones = PhoScriptWriter.GetIpaPhones(word);
+            var ipaPhones = PhoScriptWriterLegacy.GetIpaPhones(word);
             foreach (var ipa in ipaPhones)
             {
                 // Reverse-lookup: find the TIMIT token whose IPA maps to this symbol

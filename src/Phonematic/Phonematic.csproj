@@ -5,10 +5,25 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <RootNamespace>Phonematic</RootNamespace>
+    <AssemblyName>Phonematic</AssemblyName>
+    <Version>1.3.0</Version>
+    <!-- Whisper.net.Runtime ships multiple native variants; allow duplicates on publish. -->
+    <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Spectre.Console.Cli" Version="0.55.0" />
+    <!-- CLI: standards-compliant argument parsing + progress reporting (see CHANGELOG). -->
+    <PackageReference Include="System.CommandLine" Version="2.0.8" />
+    <PackageReference Include="Spectre.Console" Version="0.55.0" />
+
+    <!-- Shared acoustic pipeline dependencies (migrated from Phonematic.Gui). -->
+    <PackageReference Include="NAudio" Version="2.3.0" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.26.0" />
+    <PackageReference Include="NWaves" Version="0.9.6" />
+    <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
+    <PackageReference Include="Whisper.net" Version="1.9.1" />
+    <PackageReference Include="Whisper.net.Runtime" Version="1.9.1" />
   </ItemGroup>
 
 </Project>
