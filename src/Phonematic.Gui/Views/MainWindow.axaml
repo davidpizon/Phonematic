@@ -5,7 +5,7 @@
         x:Class="Phonematic.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="Phonematic"
-        Icon="avares://Phonematic/Assets/app.png"
+        Icon="avares://Phonematic.Gui/Assets/app.png"
         Width="1200" Height="800"
         MinWidth="900" MinHeight="600">
 

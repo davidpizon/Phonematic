@@ -104,5 +104,5 @@ public static class TimitToIpa
                    or "bcl" or "dcl" or "gcl" or "pcl" or "tcl" or "kcl";
 
     /// <summary>Returns the full set of TIMIT labels known to this mapper.</summary>
-    internal static IReadOnlyCollection<string> AllLabels => Map.Keys;
+    public static IReadOnlyCollection<string> AllLabels => Map.Keys;
 }

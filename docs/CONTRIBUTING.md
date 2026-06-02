@@ -23,12 +23,21 @@ On first run the application will download three AI model files (~500 MB total f
 ## Project Layout
 
 ```
-src/Phonematic/           ← Main Avalonia application
-tests/Phonematic.Tests/   ← xUnit unit tests
+src/Phonematic/           ← Console CLI (audio → .phos) + shared acoustic/config/model services
+src/Phonematic.Gui/       ← Avalonia desktop app (references Phonematic)
+tests/Phonematic.Tests/   ← xUnit v3 unit tests (references both)
 docs/                     ← Documentation (Markdown)
 ```
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for a full description of layers and data flow. See [API.md](API.md) for the full public API reference, [PHOSCRIPT.md](PHOSCRIPT.md) for the PhoScript output format, and [IPA_REFERENCE.md](IPA_REFERENCE.md) for the IPA symbol reference used in PhoScript.
+Run the desktop app or the CLI:
+
+```bash
+dotnet run --project src/Phonematic.Gui/Phonematic.Gui.csproj          # GUI
+dotnet run --project src/Phonematic/Phonematic.csproj -- <input> [opts] # CLI (see docs/CLI.md)
+```
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for a full description of layers and data flow, and
+[CLI.md](CLI.md) for the command-line interface. See [API.md](API.md) for the full public API reference, [PHOSCRIPT.md](PHOSCRIPT.md) for the PhoScript output format, and [IPA_REFERENCE.md](IPA_REFERENCE.md) for the IPA symbol reference used in PhoScript.
 
 ## Development Workflow
 
@@ -69,7 +78,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for a full description of layers and data
 
 - All schema changes must be done via EF Core migrations:
   ```bash
-  dotnet ef migrations add <MigrationName> --project src/Phonematic
+  dotnet ef migrations add <MigrationName> --project src/Phonematic.Gui
   ```
 - Never modify existing migration files.
 - Foreign keys should use cascade delete where appropriate.
@@ -106,7 +115,7 @@ dotnet test tests/Phonematic.Tests
 
 ### New Configuration Value
 
-1. Add the property to `Models/AppConfig.cs` with a sensible default.
+1. Add the property to `src/Phonematic/Models/AppConfig.cs` with a sensible default.
 2. Expose it in `SettingsViewModel` if user-configurable.
 3. Add a test to `AppConfigTests` verifying the default.
 

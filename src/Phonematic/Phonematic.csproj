@@ -1,64 +1,29 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <Version>1.2.6</Version>
-    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
-    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
-    <!-- LLamaSharp has multiple native DLL variants (avx/avx2/avx512) - allow duplicates -->
-    <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
-    <ApplicationIcon>Assets/app.ico</ApplicationIcon>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <RootNamespace>Phonematic</RootNamespace>
+    <AssemblyName>Phonematic</AssemblyName>
+    <Version>1.3.0</Version>
+    <!-- Whisper.net.Runtime ships multiple native variants; allow duplicates on publish. -->
+    <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
   </PropertyGroup>
 
-  <!-- Windows-only: app manifest to declare Windows 10/11 support -->
-  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
-    <ApplicationManifest>app.manifest</ApplicationManifest>
-  </PropertyGroup>
-
   <ItemGroup>
-    <AvaloniaResource Include="Assets/app.png" />
-  </ItemGroup>
+    <!-- CLI: standards-compliant argument parsing + progress reporting (see CHANGELOG). -->
+    <PackageReference Include="System.CommandLine" Version="2.0.8" />
+    <PackageReference Include="Spectre.Console" Version="0.55.0" />
 
-  <ItemGroup>
-    <Content Include="../Phonematic.ChromeExtension/**/*">
-      <Link>ChromeExtension/%(RecursiveDir)%(Filename)%(Extension)</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Avalonia" Version="12.0.1" />
-    <PackageReference Include="Avalonia.Desktop" Version="12.0.1" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.1" />
-    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.1" />
-    <PackageReference Include="Avalonia.Controls.DataGrid" Version="12.0.0" />
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
-    <PackageReference Include="Microsoft.Bcl.Memory" Version="10.0.7" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.7" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.7" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.7">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Whisper.net" Version="1.9.0" />
-    <PackageReference Include="Whisper.net.Runtime" Version="1.9.0" />
+    <!-- Shared acoustic pipeline dependencies (migrated from Phonematic.Gui). -->
     <PackageReference Include="NAudio" Version="2.3.0" />
-    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.25.0" />
-    <PackageReference Include="LLamaSharp" Version="0.26.0" />
-    <PackageReference Include="LLamaSharp.Backend.Cpu" Version="0.26.0" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.26.0" />
     <PackageReference Include="NWaves" Version="0.9.6" />
     <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
-    <PackageReference Include="TorchSharp-cpu" Version="0.106.0" />
-    <PackageReference Include="libtorch-cpu" Version="2.10.0" />
-    <PackageReference Include="Microsoft.ML" Version="5.0.0" />
-    <PackageReference Include="Microsoft.ML.TorchSharp" Version="0.23.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="Helpers\cmudict.dict" />
+    <PackageReference Include="Whisper.net" Version="1.9.1" />
+    <PackageReference Include="Whisper.net.Runtime" Version="1.9.1" />
   </ItemGroup>
 
 </Project>

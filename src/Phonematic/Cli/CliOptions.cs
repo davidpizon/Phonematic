@@ -1,0 +1,28 @@
+namespace Phonematic.Cli;
+
+/// <summary>
+/// Parsed command-line options for a single CLI invocation. Mode (single-file vs
+/// directory) is determined at run time from whether <see cref="Input"/> is a file or
+/// a directory, not from a flag.
+/// </summary>
+public sealed record CliOptions
+{
+    /// <summary>Path to a supported audio file or a directory of audio files.</summary>
+    public required string Input { get; init; }
+
+    /// <summary>
+    /// Output location. In single-file mode this is the target <c>.phos</c> file path
+    /// (<c>-o</c>/<c>--output</c>); in directory mode it is the output directory
+    /// (<c>--output-dir</c>). <see langword="null"/> selects the default (next to the source).
+    /// </summary>
+    public string? Output { get; init; }
+
+    /// <summary>Recurse into subdirectories (directory mode only). Default: top-level only.</summary>
+    public bool Recursive { get; init; }
+
+    /// <summary>Overwrite existing <c>.phos</c> targets instead of skipping them.</summary>
+    public bool Overwrite { get; init; }
+
+    /// <summary>Suppress the progress bar and informational output; warnings/errors still print.</summary>
+    public bool Quiet { get; init; }
+}

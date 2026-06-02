@@ -1,83 +1,57 @@
-using System;
-using System.Runtime.InteropServices;
-using Avalonia;
+using System.CommandLine;
+using Phonematic.Cli;
+using Phonematic.Services;
+using Spectre.Console;
 
 namespace Phonematic;
 
 /// <summary>
-/// Application entry point. Bootstraps the Avalonia desktop lifetime and provides a
-/// last-resort fatal-error display that works on both Windows (MessageBox) and other
-/// platforms (stderr).
+/// Entry point for the Phonematic CLI — a stateless audio→PhoScript converter.
+/// Argument parsing and help/version are provided by <c>System.CommandLine</c>; the
+/// progress bar by <c>Spectre.Console</c>. The conversion logic lives in
+/// <see cref="Cli.CliRunner"/>.
 /// </summary>
-internal sealed class Program
+internal static class Program
 {
-    /// <summary>
-    /// Main entry point. Registers an <see cref="AppDomain.UnhandledException"/> handler for
-    /// background-thread failures, then starts the Avalonia classic desktop lifetime.
-    /// Any exception that escapes <c>StartWithClassicDesktopLifetime</c> is caught and shown
-    /// as a fatal error before the process exits.
-    /// </summary>
-    /// <param name="args">Command-line arguments passed through to Avalonia.</param>
-    [STAThread]
-    public static void Main(string[] args)
+    private static async Task<int> Main(string[] args)
     {
-        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
-        {
-            if (e.ExceptionObject is Exception ex)
-                ShowFatalError($"An unexpected error occurred.\n\n{ex.GetType().Name}: {ex.Message}");
-        };
+        var builder = new CliCommandBuilder();
+        builder.SetHandler(RunAsync);
 
-        try
+        var parseResult = builder.RootCommand.Parse(args);
+
+        // Map argument/usage errors to exit code 2 (System.CommandLine would otherwise use 1).
+        if (parseResult.Errors.Count > 0)
         {
-            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+            foreach (var error in parseResult.Errors)
+                Console.Error.WriteLine($"error: {error.Message}");
+            Console.Error.WriteLine("Run with --help for usage.");
+            return ExitCodes.UsageError;
         }
-        catch (Exception ex)
-        {
-            ShowFatalError(
-                "Phonematic failed to start.\n\n" +
-                $"{ex.GetType().Name}: {ex.Message}\n\n" +
-                "This may indicate a missing runtime or corrupted installation.\n" +
-                "Try reinstalling the application.");
-        }
+
+        return await parseResult.InvokeAsync();
     }
 
-    /// <summary>
-    /// Builds the Avalonia <see cref="AppBuilder"/> with platform auto-detection,
-    /// the Inter font, and trace logging. Called by both <see cref="Main"/> and the
-    /// Avalonia designer.
-    /// </summary>
-    /// <returns>A configured <see cref="AppBuilder"/> instance.</returns>
-    public static AppBuilder BuildAvaloniaApp()
-        => AppBuilder.Configure<App>()
-            .UsePlatformDetect()
-            .WithInterFont()
-            .LogToTrace();
-
-    /// <summary>
-    /// Displays a fatal error message and exits the process with code 1.
-    /// On Windows, shows a native MessageBox (MB_ICONERROR) before writing to stderr.
-    /// On other platforms, writes directly to stderr.
-    /// </summary>
-    /// <param name="message">Human-readable error text to display.</param>
-    internal static void ShowFatalError(string message)
+    private static async Task<int> RunAsync(CliOptions options, CancellationToken ct)
     {
-        if (OperatingSystem.IsWindows())
-        {
-            try
+        IConfigService config = new ConfigService();
+        IModelManagerService models = new ModelManagerService(config);
+
+        using IAcousticPhoneRecognizerService recognizer = new AcousticPhoneRecognizerService(models);
+        IAcousticFeatureExtractorService featureExtractor = new AcousticFeatureExtractorService();
+        IPhoScriptConverter converter = new PhoScriptConverter(recognizer, featureExtractor);
+
+        IProgressDisplay progress = options.Quiet
+            ? new NullProgressDisplay()
+            : new SpectreProgressDisplay(AnsiConsole.Create(new AnsiConsoleSettings
             {
-                MessageBox(IntPtr.Zero, message, "Phonematic - Error", 0x10 /* MB_ICONERROR */);
-            }
-            catch { /* P/Invoke unavailable, fall through to stderr */ }
-        }
+                // Render the progress bar to stderr so stdout carries only result lines.
+                Out = new AnsiConsoleOutput(Console.Error),
+            }));
 
-        Console.Error.WriteLine(message);
-        Environment.Exit(1);
+        var runner = new CliRunner(
+            converter, models, progress, Console.Out, Console.Error, options.Quiet);
+
+        return await runner.RunAsync(options, ct);
     }
-
-    /// <summary>
-    /// P/Invoke declaration for the Win32 <c>MessageBox</c> function in user32.dll.
-    /// Used only on Windows to show a blocking modal error dialog.
-    /// </summary>
-    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    private static extern int MessageBox(IntPtr hWnd, string text, string caption, uint type);
 }

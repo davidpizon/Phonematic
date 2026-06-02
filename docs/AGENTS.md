@@ -10,6 +10,7 @@ All project documentation lives in the `/docs` folder. Refer to these documents 
 |---|---|
 | [API.md](API.md) | Full reference for all public classes, interfaces, records, and ViewModels |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | System architecture, data flows, DB schema, and file layout |
+| [CLI.md](CLI.md) | Command-line interface: synopsis, flags, examples, and exit codes |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Development workflow, coding standards, and PR checklist |
 | [TESTING.md](TESTING.md) | Test suite structure, patterns, and how to run tests |
 | [PHOSCRIPT.md](PHOSCRIPT.md) | PhoScript 1.0 specification — the application's prosodic markup output format |
@@ -48,26 +49,37 @@ Phonematic is a desktop application for creating exportable AI voice models that
 ## Project Structure
 
 ```
-Phonematic/                    ← Solution root
+Phonematic/                    ← Solution root (Phonematic.slnx)
 ├── src/
-│   └── Phonematic/            ← Main application project (Avalonia, .NET 10)
+│   ├── Phonematic/            ← Console CLI + shared services (.NET 10) → Phonematic.dll/exe
+│   │   ├── Program.cs         ← CLI entry point (System.CommandLine)
+│   │   ├── Cli/               ← CLI orchestration (CliRunner, options, path resolver, progress)
+│   │   ├── Helpers/           ← Shared static helpers (AudioConverter, CtcDecoder, TimitToIpa, PhoScriptWriter)
+│   │   ├── Models/            ← Shared data models (AppConfig, PhoneAlignment, AcousticFeatureFrame, SpeakerBaseline, …)
+│   │   └── Services/          ← Shared services (ConfigService, ModelManagerService, acoustic recognizer + feature extractor)
+│   └── Phonematic.Gui/        ← Avalonia GUI (.NET 10) → Phonematic.Gui.dll/exe; references Phonematic
 │       ├── App.axaml.cs       ← DI composition root and app bootstrap
 │       ├── Program.cs         ← Entry point, fatal error handling
 │       ├── Converters/        ← Avalonia IValueConverter implementations
 │       ├── Data/              ← EF Core DbContext
-│       ├── Helpers/           ← Static utility classes (AudioConverter, FileHasher)
+│       ├── Helpers/           ← GUI-only helpers (CmuDict, G2P, ArpabetToIpa, PhoScriptWriterLegacy, FileHasher)
 │       ├── Migrations/        ← EF Core migration files
-│       ├── Models/            ← Plain data models (AppConfig, ProcessedFile, etc.)
-│       ├── Services/          ← Business logic services and their interfaces
+│       ├── Models/            ← GUI-only data models (ProcessedFile, VoiceModel, etc.)
+│       ├── Services/          ← GUI-only services (Transcription, Embedding, LLM, Plaud, training, …)
 │       ├── ViewModels/        ← MVVM ViewModels (CommunityToolkit.Mvvm)
 │       └── Views/             ← Avalonia XAML views and code-behind
 ├── tests/
-│   └── Phonematic.Tests/      ← xUnit test project
+│   └── Phonematic.Tests/      ← xUnit v3 test project (references both projects)
 └── docs/                      ← Project documentation (this folder)
 ```
 
-- Source code lives under the solution root at `C:\Users\david.pizon\source\repos\Phonematic\`.
-- Documentation lives in the `/docs` folder.
+- The **`Phonematic`** project is the headless console **CLI** (`audio → .phos`) and also owns the
+  shared acoustic pipeline + config/model services. The **`Phonematic.Gui`** project is the Avalonia
+  desktop app (formerly named `Phonematic`); it references `Phonematic` and resolves the shared
+  services through its existing DI.
+- The acoustic pipeline produces PhoScript output with the `.phos` extension.
+- Source code lives under the solution root at `C:\git\Phonematic\`.
+- Documentation lives in the `/docs` folder; CLI usage is in [CLI.md](CLI.md).
 
 ## Coding Standards
 
@@ -86,8 +98,8 @@ All services are registered in `App.axaml.cs → ConfigureServices`. Follow thes
 
 | Lifetime | Used for |
 |---|---|
-| `Singleton` | `IConfigService`, `IModelManagerService`, `TokenListenerService`, `IPlaudApiService`, all ViewModels |
-| `Transient` | `IFileTrackingService` |
+| `Singleton` | `IConfigService`, `IModelManagerService`, `IActiveVoiceModelService`, `TokenListenerService`, `IPlaudApiService`, `MainWindowViewModel` |
+| `Transient` | `IFileTrackingService`, per-tab ViewModels (`ModelViewModel`, `TranscribeViewModel`, `TranscriptionsViewModel`, `TrainViewModel`, `SearchViewModel`, `SettingsViewModel`, `PlaudSyncViewModel`) |
 | `Scoped / Factory` | `PhonematicDbContext` (via `AddDbContextFactory`) |
 
 ## Adding a New Service
