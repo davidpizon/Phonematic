@@ -60,17 +60,36 @@ public interface IModelManagerService
     /// <param name="ct">Cancellation token.</param>
     Task DownloadLlmModelAsync(IProgress<double>? progress = null, CancellationToken ct = default);
 
-    /// <summary>Returns <see langword="true"/> if the wav2vec2 phoneme ONNX model exists on disk.</summary>
+    /// <summary>Returns <see langword="true"/> if the default wav2vec2 phoneme ONNX model exists on disk.</summary>
     bool IsWav2Vec2ModelDownloaded();
 
-    /// <summary>Returns the absolute path to <c>wav2vec2-phoneme.onnx</c>.</summary>
+    /// <summary>Returns <see langword="true"/> if the named wav2vec2 phoneme ONNX model exists on disk.</summary>
+    /// <param name="name">Base-model name (file is <c>acoustic/&lt;name&gt;.onnx</c>).</param>
+    bool IsWav2Vec2ModelDownloaded(string name);
+
+    /// <summary>Returns the absolute path to the default <c>wav2vec2-phoneme.onnx</c>.</summary>
     string GetWav2Vec2ModelPath();
 
+    /// <summary>Returns the absolute path to the named base model (<c>acoustic/&lt;name&gt;.onnx</c>).</summary>
+    /// <param name="name">Base-model name.</param>
+    string GetWav2Vec2ModelPath(string name);
+
     /// <summary>
-    /// Downloads the wav2vec2 phoneme ONNX model (~95 MB int8 quantised) from HuggingFace
+    /// Downloads the default wav2vec2 phoneme ONNX model (~95 MB int8 quantised) from HuggingFace
     /// if not already present.
     /// </summary>
     /// <param name="progress">Optional progress reporter.</param>
     /// <param name="ct">Cancellation token.</param>
     Task DownloadWav2Vec2ModelAsync(IProgress<double>? progress = null, CancellationToken ct = default);
+
+    /// <summary>
+    /// Downloads a wav2vec2 phone model from <paramref name="url"/> to the named path
+    /// (<c>acoustic/&lt;name&gt;.onnx</c>) if not already present. Lets the user fetch and reference
+    /// different base models for different speakers.
+    /// </summary>
+    /// <param name="url">Source URL of the ONNX model.</param>
+    /// <param name="name">Base-model name to store it under.</param>
+    /// <param name="progress">Optional progress reporter.</param>
+    /// <param name="ct">Cancellation token.</param>
+    Task DownloadWav2Vec2ModelAsync(string url, string name, IProgress<double>? progress = null, CancellationToken ct = default);
 }

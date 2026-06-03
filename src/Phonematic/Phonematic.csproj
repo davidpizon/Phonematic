@@ -24,6 +24,17 @@
     <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
     <PackageReference Include="Whisper.net" Version="1.9.1" />
     <PackageReference Include="Whisper.net.Runtime" Version="1.9.1" />
+
+    <!-- Speaker-adapter training (CLI `train`) and inference-time adapter application.
+         Versions match Phonematic.Gui so both projects share one libtorch native payload. -->
+    <PackageReference Include="TorchSharp-cpu" Version="0.107.0" />
+    <PackageReference Include="libtorch-cpu" Version="2.10.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- CMU Pronouncing Dictionary: word → ARPAbet lookup for forced-alignment targets
+         and the legacy Whisper writer (moved here from Phonematic.Gui). -->
+    <EmbeddedResource Include="Helpers\cmudict.dict" />
   </ItemGroup>
 
 </Project>

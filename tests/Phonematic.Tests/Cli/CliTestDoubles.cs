@@ -11,14 +11,18 @@ internal sealed class FakeConverter : IPhoScriptConverter
 {
     public bool ShouldThrow { get; init; }
     public List<(string Input, string Output)> Calls { get; } = new();
+    public List<(string? Transcript, bool UseWhisper)> WordSources { get; } = new();
 
     public Task ConvertFileAsync(
         string inputAudioPath,
         string outputPhosPath,
         IProgress<double>? progress,
-        CancellationToken ct)
+        CancellationToken ct,
+        string? transcriptPath = null,
+        bool useWhisper = false)
     {
         Calls.Add((inputAudioPath, outputPhosPath));
+        WordSources.Add((transcriptPath, useWhisper));
         progress?.Report(1.0);
 
         if (ShouldThrow)
@@ -41,7 +45,9 @@ internal sealed class FakeModelManager : IModelManagerService
     public bool Wav2Vec2Ready { get; init; } = true;
 
     public bool IsWav2Vec2ModelDownloaded() => Wav2Vec2Ready;
+    public bool IsWav2Vec2ModelDownloaded(string name) => Wav2Vec2Ready;
     public string GetWav2Vec2ModelPath() => Path.Combine(Path.GetTempPath(), "wav2vec2-phoneme.onnx");
+    public string GetWav2Vec2ModelPath(string name) => Path.Combine(Path.GetTempPath(), $"{name}.onnx");
 
     public bool IsWhisperModelDownloaded(string modelSize) => false;
     public bool IsOnnxModelDownloaded() => false;

@@ -17,6 +17,7 @@ internal static class Program
     {
         var builder = new CliCommandBuilder();
         builder.SetHandler(RunAsync);
+        builder.SetTrainHandler(RunTrainAsync);
 
         var parseResult = builder.RootCommand.Parse(args);
 
@@ -37,9 +38,23 @@ internal static class Program
         IConfigService config = new ConfigService();
         IModelManagerService models = new ModelManagerService(config);
 
+        var whisperModelSize = string.IsNullOrWhiteSpace(options.WhisperModel)
+            ? config.Load().WhisperModelSize
+            : options.WhisperModel;
+
         using IAcousticPhoneRecognizerService recognizer = new AcousticPhoneRecognizerService(models);
         IAcousticFeatureExtractorService featureExtractor = new AcousticFeatureExtractorService();
-        IPhoScriptConverter converter = new PhoScriptConverter(recognizer, featureExtractor);
+
+        // Optional word source / adaptation, constructed only when requested.
+        using IWhisperWordRecognizer? whisper = options.UseWhisper
+            ? new WhisperWordRecognizer(models, config, whisperModelSize)
+            : null;
+        using IVoiceAdapter? voiceAdapter = string.IsNullOrWhiteSpace(options.VoiceModelPath)
+            ? null
+            : new VoiceAdapter(options.VoiceModelPath!);
+
+        IPhoScriptConverter converter = new PhoScriptConverter(
+            recognizer, featureExtractor, voiceAdapter, whisper);
 
         IProgressDisplay progress = options.Quiet
             ? new NullProgressDisplay()
@@ -50,8 +65,20 @@ internal static class Program
             }));
 
         var runner = new CliRunner(
-            converter, models, progress, Console.Out, Console.Error, options.Quiet);
+            converter, models, progress, Console.Out, Console.Error, options.Quiet, whisperModelSize);
 
+        return await runner.RunAsync(options, ct);
+    }
+
+    private static async Task<int> RunTrainAsync(TrainOptions options, CancellationToken ct)
+    {
+        IConfigService config = new ConfigService();
+        IModelManagerService models = new ModelManagerService(config);
+
+        using IAcousticPhoneRecognizerService recognizer = new AcousticPhoneRecognizerService(models);
+        IAdapterTrainer trainer = new AdapterTrainer(recognizer);
+
+        var runner = new TrainRunner(models, trainer, Console.Out, Console.Error, options.Quiet);
         return await runner.RunAsync(options, ct);
     }
 }

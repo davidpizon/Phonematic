@@ -215,6 +215,43 @@ public sealed class CliRunnerTests : IDisposable
     }
 
     [Fact]
+    public async Task Directory_PairsAudioWithSiblingTranscript()
+    {
+        var dir = NewTempDir();
+        var audio = CreateAudio(dir, "a.mp3");
+        File.WriteAllText(Path.ChangeExtension(audio, ".txt"), "the cat sat");
+        CreateAudio(dir, "b.wav"); // no sibling transcript
+        var converter = new FakeConverter();
+
+        var (runner, _, _) = MakeRunner(converter, new FakeModelManager());
+        var code = await runner.RunAsync(Options(dir), CancellationToken.None);
+
+        Assert.Equal(ExitCodes.Success, code);
+        // a.mp3 gets its sibling transcript; b.wav gets none.
+        var aSource = converter.WordSources[converter.Calls.FindIndex(c => c.Input.EndsWith("a.mp3"))];
+        var bSource = converter.WordSources[converter.Calls.FindIndex(c => c.Input.EndsWith("b.wav"))];
+        Assert.EndsWith("a.txt", aSource.Transcript);
+        Assert.Null(bSource.Transcript);
+    }
+
+    [Fact]
+    public async Task SingleFile_ForwardsTranscriptOption()
+    {
+        var dir = NewTempDir();
+        var audio = CreateAudio(dir, "voice.mp3");
+        var transcript = Path.Combine(dir, "script.txt");
+        File.WriteAllText(transcript, "hello");
+        var converter = new FakeConverter();
+
+        var (runner, _, _) = MakeRunner(converter, new FakeModelManager());
+        var options = new CliOptions { Input = audio, TranscriptPath = transcript };
+        var code = await runner.RunAsync(options, CancellationToken.None);
+
+        Assert.Equal(ExitCodes.Success, code);
+        Assert.Equal(transcript, converter.WordSources.Single().Transcript);
+    }
+
+    [Fact]
     public async Task Directory_Recursive_MirrorsSubfoldersUnderOutputDir()
     {
         var input = NewTempDir();

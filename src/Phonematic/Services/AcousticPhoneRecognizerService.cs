@@ -21,6 +21,7 @@ namespace Phonematic.Services;
 public sealed class AcousticPhoneRecognizerService : IAcousticPhoneRecognizerService
 {
     private readonly IModelManagerService _modelManager;
+    private readonly string? _modelPath;
     private InferenceSession? _session;
     private readonly object _lock = new();
 
@@ -48,9 +49,10 @@ public sealed class AcousticPhoneRecognizerService : IAcousticPhoneRecognizerSer
     /// Initialises the service. The ONNX session is not loaded until the first
     /// call to <see cref="RecognizeAsync"/>.
     /// </summary>
-    public AcousticPhoneRecognizerService(IModelManagerService modelManager)
+    public AcousticPhoneRecognizerService(IModelManagerService modelManager, string? modelPath = null)
     {
         _modelManager = modelManager;
+        _modelPath = modelPath;
     }
 
     /// <inheritdoc/>
@@ -88,7 +90,7 @@ public sealed class AcousticPhoneRecognizerService : IAcousticPhoneRecognizerSer
         lock (_lock)
         {
             if (_session is not null) return;
-            var modelPath = _modelManager.GetWav2Vec2ModelPath();
+            var modelPath = _modelPath ?? _modelManager.GetWav2Vec2ModelPath();
             if (!File.Exists(modelPath))
                 throw new FileNotFoundException(
                     "wav2vec2 phoneme ONNX model not found. Run model setup first.", modelPath);
@@ -141,7 +143,7 @@ public sealed class AcousticPhoneRecognizerService : IAcousticPhoneRecognizerSer
             hiddenStates = new float[frames, 768];
         }
 
-        return new PhoneRecognitionResult(phones, hiddenStates);
+        return new PhoneRecognitionResult(phones, hiddenStates, logits);
     }
 
     private static float[] LoadNormalisedSamples(string wavPath)

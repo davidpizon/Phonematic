@@ -38,13 +38,30 @@ public class ModelManagerService : IModelManagerService
     public bool IsWav2Vec2ModelDownloaded()
         => File.Exists(GetWav2Vec2ModelPath());
 
+    public bool IsWav2Vec2ModelDownloaded(string name)
+        => File.Exists(GetWav2Vec2ModelPath(name));
+
     public string GetWav2Vec2ModelPath()
         => Path.Combine(_config.AcousticModelsDirectory, "wav2vec2-phoneme.onnx");
+
+    public string GetWav2Vec2ModelPath(string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        return Path.Combine(_config.AcousticModelsDirectory, $"{name}.onnx");
+    }
 
     public async Task DownloadWav2Vec2ModelAsync(IProgress<double>? progress = null, CancellationToken ct = default)
     {
         if (IsWav2Vec2ModelDownloaded()) return;
         await DownloadFileAsync(Wav2Vec2ModelUrl, GetWav2Vec2ModelPath(), progress, ct);
+    }
+
+    public async Task DownloadWav2Vec2ModelAsync(
+        string url, string name, IProgress<double>? progress = null, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(url);
+        if (IsWav2Vec2ModelDownloaded(name)) return;
+        await DownloadFileAsync(url, GetWav2Vec2ModelPath(name), progress, ct);
     }
 
     public string GetWhisperModelPath(string modelSize)

@@ -11,4 +11,11 @@ public sealed record PhoneRecognitionResult(
     /// Encoder hidden states shaped [frames × 768]. Used as features for speaker-adapter
     /// fine-tuning in <see cref="Phonematic.Services.VoiceModelTrainingService"/>.
     /// </summary>
-    float[,] HiddenStates);
+    float[,] HiddenStates,
+    /// <summary>
+    /// Raw (un-softmaxed) CTC logits shaped [frames × vocab]. Needed by
+    /// <see cref="Phonematic.Helpers.CtcForcedAligner"/> (forced alignment against a known
+    /// word sequence) and by speaker-adapter application, which re-derives logits from
+    /// <see cref="HiddenStates"/>.
+    /// </summary>
+    float[,] Logits);

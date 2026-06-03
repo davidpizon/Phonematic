@@ -91,4 +91,83 @@ public class CliArgumentParsingTests
         // Built-in help/version directives parse cleanly even without the input argument.
         Assert.Empty(parse.Errors);
     }
+
+    // -------------------------------------------------------------------------
+    // Word-source / adaptation options
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void Parse_TranscriptVoiceModelWhisper_AreBound()
+    {
+        var builder = new CliCommandBuilder();
+        var parse = builder.RootCommand.Parse(
+            ["--transcript", "words.txt", "--voice-model", "spk.phonematic",
+             "--whisper", "--whisper-model", "small", "in.wav"]);
+
+        Assert.Empty(parse.Errors);
+        var o = builder.Bind(parse);
+        Assert.Equal("words.txt", o.TranscriptPath);
+        Assert.Equal("spk.phonematic", o.VoiceModelPath);
+        Assert.True(o.UseWhisper);
+        Assert.Equal("small", o.WhisperModel);
+    }
+
+    [Fact]
+    public void Parse_TranscriptShortAlias_IsBound()
+    {
+        var builder = new CliCommandBuilder();
+        var parse = builder.RootCommand.Parse(["-t", "w.txt", "in.wav"]);
+
+        Assert.Empty(parse.Errors);
+        Assert.Equal("w.txt", builder.Bind(parse).TranscriptPath);
+    }
+
+    [Fact]
+    public void Parse_ConvertDefaults_NoWordSourceOptions()
+    {
+        var builder = new CliCommandBuilder();
+        var o = builder.Bind(builder.RootCommand.Parse(["in.wav"]));
+
+        Assert.Null(o.TranscriptPath);
+        Assert.Null(o.VoiceModelPath);
+        Assert.False(o.UseWhisper);
+    }
+
+    // -------------------------------------------------------------------------
+    // train subcommand
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void Parse_TrainSubcommand_BindsArgumentsAndOptions()
+    {
+        var builder = new CliCommandBuilder();
+        var parse = builder.RootCommand.Parse(
+            ["train", "./pairs", "--output", "spk.phonematic", "--epochs", "10", "-r"]);
+
+        Assert.Empty(parse.Errors);
+        var o = builder.BindTrain(parse);
+        Assert.Equal("./pairs", o.PairsDir);
+        Assert.Equal("spk.phonematic", o.Output);
+        Assert.Equal(10, o.Epochs);
+        Assert.True(o.Recursive);
+    }
+
+    [Fact]
+    public void Parse_TrainSubcommand_EpochsDefaultsTo50()
+    {
+        var builder = new CliCommandBuilder();
+        var parse = builder.RootCommand.Parse(["train", "./pairs", "-o", "spk.phonematic"]);
+
+        Assert.Empty(parse.Errors);
+        Assert.Equal(50, builder.BindTrain(parse).Epochs);
+    }
+
+    [Fact]
+    public void Parse_TrainSubcommand_MissingRequiredOutput_Errors()
+    {
+        var builder = new CliCommandBuilder();
+        var parse = builder.RootCommand.Parse(["train", "./pairs"]);
+
+        Assert.NotEmpty(parse.Errors); // --output is required
+    }
 }

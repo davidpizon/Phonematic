@@ -26,6 +26,32 @@ All notable changes to Phonematic are documented here.
   reporting are not reasonably hand-rolled. (The unused `Spectre.Console.Cli` placeholder
   reference was removed.)
 
+#### Accurate words: forced alignment, Whisper hybrid, and CLI training
+
+- **Forced alignment (`-t, --transcript <file>`).** When the exact words are known, the CLI now
+  constrains decoding to those words via a Viterbi CTC forced aligner (`CtcForcedAligner`) instead
+  of free-guessing. The resulting `.phos` carries the real words in `<word orth>` with audio-derived
+  timing. In directory mode, a sibling `<name>.txt` next to each audio file is used automatically.
+- **Whisper hybrid (`--whisper`, `--whisper-model <size>`).** For transcript-less audio, Whisper
+  supplies the words and sentence segmentation (one `<sentence>` per segment) while wav2vec2
+  forced-aligns the phones within each word. New `WhisperWordRecognizer` (lean, DB-free) reuses the
+  already-referenced `Whisper.net`.
+- **Speaker adaptation applied at inference (`--voice-model <file>`).** Trained `.phonematic`
+  adapters are now actually used during recognition (`VoiceAdapter` re-derives logits from wav2vec2
+  hidden states), improving transcript-less accuracy for the adapted speaker. Previously adapters
+  were trained but never applied.
+- **CLI training (`Phonematic train <pairs-dir> --output model.phonematic [--epochs N] [-r]`).**
+  New database-free `AdapterTrainer` (lifted from the GUI's training core) trains a speaker adapter
+  from many (audio, sibling-`.txt`) pairs; phone-label targets come from a new `PhoneTargetBuilder`
+  that maps ARPAbet directly to TIMIT labels (no lossy IPA round-trip).
+- **Supporting changes:** `PhoneRecognitionResult` now also exposes raw `Logits`; a new word-aware
+  `PhoScriptWriter.Write` overload populates `orth` and emits multiple `<sentence>` blocks; the CMU
+  dictionary / G2P / ARPAbet→IPA helpers (and `cmudict.dict`) and `TrainingProgress` moved into the
+  shared `Phonematic` project. `TorchSharp-cpu`/`libtorch-cpu` were added to the console project for
+  training and adapter inference.
+  - *Note:* the GUI's `VoiceModelTrainingService` retains its own DB/feature-cache training path and
+    was intentionally left unchanged; the shared `AdapterTrainer` powers the CLI.
+
 #### Project restructure — shared acoustic pipeline
 
 - **Renamed the Avalonia app project to `Phonematic.Gui`** (assembly `Phonematic.Gui`) and moved

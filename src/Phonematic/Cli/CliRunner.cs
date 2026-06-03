@@ -20,6 +20,7 @@ public sealed class CliRunner
     private readonly TextWriter _stdout;
     private readonly TextWriter _stderr;
     private readonly bool _quiet;
+    private readonly string _whisperModelSize;
 
     public CliRunner(
         IPhoScriptConverter converter,
@@ -27,7 +28,8 @@ public sealed class CliRunner
         IProgressDisplay progress,
         TextWriter stdout,
         TextWriter stderr,
-        bool quiet)
+        bool quiet,
+        string? whisperModelSize = null)
     {
         _converter = converter;
         _models = models;
@@ -35,6 +37,7 @@ public sealed class CliRunner
         _stdout = stdout;
         _stderr = stderr;
         _quiet = quiet;
+        _whisperModelSize = string.IsNullOrWhiteSpace(whisperModelSize) ? "base" : whisperModelSize;
     }
 
     /// <summary>Runs the conversion and returns the process exit code (see <see cref="ExitCodes"/>).</summary>
@@ -80,9 +83,9 @@ public sealed class CliRunner
             return ExitCodes.UsageError;
         }
 
-        if (!ModelReady())
+        if (!ModelReady(options))
         {
-            PrintModelInstructions();
+            PrintModelInstructions(options);
             return ExitCodes.EnvironmentError;
         }
 
@@ -99,7 +102,8 @@ public sealed class CliRunner
             var reporter = scope.AddTask(Path.GetFileName(options.Input));
             try
             {
-                await _converter.ConvertFileAsync(options.Input, output, reporter, ct);
+                await _converter.ConvertFileAsync(
+                    options.Input, output, reporter, ct, options.TranscriptPath, options.UseWhisper);
                 _stdout.WriteLine(output);
                 Info($"Wrote {output}");
                 return ExitCodes.Success;
@@ -122,9 +126,9 @@ public sealed class CliRunner
 
     private async Task<int> RunDirectoryAsync(CliOptions options, CancellationToken ct)
     {
-        if (!ModelReady())
+        if (!ModelReady(options))
         {
-            PrintModelInstructions();
+            PrintModelInstructions(options);
             return ExitCodes.EnvironmentError;
         }
 
@@ -161,7 +165,9 @@ public sealed class CliRunner
                     var reporter = scope.AddTask(Path.GetFileName(file));
                     try
                     {
-                        await _converter.ConvertFileAsync(file, output, reporter, ct);
+                        var transcript = ResolveSiblingTranscript(file);
+                        await _converter.ConvertFileAsync(
+                            file, output, reporter, ct, transcript, options.UseWhisper);
                         succeeded++;
                         _stdout.WriteLine(output);
                     }
@@ -199,14 +205,33 @@ public sealed class CliRunner
     // Helpers
     // ------------------------------------------------------------------
 
-    private bool ModelReady() => _models.IsWav2Vec2ModelDownloaded();
+    private bool ModelReady(CliOptions options) =>
+        _models.IsWav2Vec2ModelDownloaded()
+        && (!options.UseWhisper || _models.IsWhisperModelDownloaded(_whisperModelSize));
 
-    private void PrintModelInstructions()
+    private void PrintModelInstructions(CliOptions options)
     {
-        Error("Required wav2vec2 phoneme model is not downloaded.");
-        Error($"Expected at: {_models.GetWav2Vec2ModelPath()}");
-        Error("Download it via the Phonematic GUI setup wizard, or place the model file at the");
-        Error("path above. The CLI never downloads models automatically.");
+        if (!_models.IsWav2Vec2ModelDownloaded())
+        {
+            Error("Required wav2vec2 phoneme model is not downloaded.");
+            Error($"Expected at: {_models.GetWav2Vec2ModelPath()}");
+            Error("Download it via the Phonematic GUI setup wizard, or place the model file at the");
+            Error("path above. The CLI never downloads models automatically.");
+        }
+
+        if (options.UseWhisper && !_models.IsWhisperModelDownloaded(_whisperModelSize))
+        {
+            Error($"Whisper model '{_whisperModelSize}' is not downloaded (required by --whisper).");
+            Error($"Expected at: {_models.GetWhisperModelPath(_whisperModelSize)}");
+            Error("Download it via the Phonematic GUI setup wizard, or omit --whisper.");
+        }
+    }
+
+    /// <summary>Returns the sibling <c>&lt;name&gt;.txt</c> transcript for an audio file, or null if absent.</summary>
+    private static string? ResolveSiblingTranscript(string audioFile)
+    {
+        var transcript = Path.ChangeExtension(audioFile, ".txt");
+        return File.Exists(transcript) ? transcript : null;
     }
 
     private void Info(string message)
