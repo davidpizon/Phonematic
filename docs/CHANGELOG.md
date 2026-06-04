@@ -84,9 +84,10 @@ All notable changes to Phonematic are documented here.
     `ModelManagerService`/`IModelManagerService`.
   - Models: `AppConfig`, `PhoneAlignment`, `AcousticFeatureFrame`, `SpeakerBaseline`,
     `PhoneRecognitionResult`.
-- The Whisper-legacy IPA path is **not** shared: the `WriteLegacy` overload was split out into
-  `PhoScriptWriterLegacy` in `Phonematic.Gui` (alongside `CmuDict`, `GraphemeToPhoneme`,
-  `ArpabetToIpa`), since the acoustic pipeline does not use it.
+- The Whisper-legacy IPA path was split out of the acoustic `PhoScriptWriter` into
+  `PhoScriptWriterLegacy`. It now lives in the shared `Phonematic` project (alongside `CmuDict`,
+  `GraphemeToPhoneme`, `ArpabetToIpa` — see the model-management relocation section above), so both
+  products can use it; the acoustic pipeline itself does not.
 - `Phonematic.Gui` now references `Phonematic` and resolves the migrated services through its
   existing DI; GUI behaviour is unchanged.
 
@@ -108,10 +109,7 @@ All notable changes to Phonematic are documented here.
   Extracts per-frame pitch (F0), RMS energy, zero-crossing rate, and harmonic-to-noise ratio from a 16 kHz mono WAV file using NWaves `PitchExtractor` and `TimeDomainFeaturesExtractor`. Returns `IReadOnlyList<AcousticFeatureFrame>`.
 
 - **`AcousticPhoneRecognizerService`** (`Services/AcousticPhoneRecognizerService.cs`)  
-  Runs a wav2vec2 ONNX model to produce phone-level alignments (`PhoneAlignment` records with IPA symbols and millisecond timestamps). TIMIT 44-phone vocabulary embedded internally.
-
-- **`VoiceModelTrainingService`** (`Services/VoiceModelTrainingService.cs`)  
-  Trains a two-layer TorchSharp adapter (Linear → ReLU → Dropout → Linear) on top of frozen wav2vec2 hidden states using CTC loss. Saves the best checkpoint to `voice_models/<id>/adapter.phonematic`.
+  Runs a wav2vec2 ONNX model to produce phone-level alignments (`PhoneAlignment` records with IPA symbols and millisecond timestamps). TIMIT 57-phone vocabulary (index 0 = CTC blank) embedded internally.
 
 - **`VoiceModelService`** / **`IVoiceModelService`**  
   CRUD service for `VoiceModel` entities. Lists, creates, renames, and deletes voice models and their associated training pairs.
@@ -216,7 +214,7 @@ Replaced non-existent types with their actual NWaves 0.9.6 equivalents:
 | `CS0101` — duplicate `PhoScriptWriter` class | Removed the duplicate class body that was left in the file after the acoustic overload was prepended. |
 | `CS0111` — duplicate `GetIpaPhones`, `SplitWords`, `Escape` members | Same root cause as above; resolved by the duplicate class removal. |
 | `CS0535` — `ModelManagerService` did not implement `IsWav2Vec2ModelDownloaded`, `GetWav2Vec2ModelPath`, `DownloadWav2Vec2ModelAsync` | Implemented all three members. |
-| `CS0246` — `Sequential`, `CTCLoss` not found in `VoiceModelTrainingService` | Corrected to `TorchSharp.Modules.Sequential` and `torch.nn.CTCLoss(...)`. |
+| `CS0246` — `Sequential`, `CTCLoss` not found in the TorchSharp adapter training code | Corrected to `TorchSharp.Modules.Sequential` and `torch.nn.CTCLoss(...)`. |
 | `CS0246` — `PitchExtractorOptions`, `YinPitchExtractor`, `EnergyExtractor` not found | Replaced with correct NWaves 0.9.6 types (see above). |
 | `CS7036` — `PhoScriptWriter.Write` missing `baseline` argument in `TranscriptionService` | Caller updated to `WriteLegacy`. |
 | `CS0103` — `log_softmax` not in scope | Replaced with `torch.nn.functional.log_softmax(...)`. |

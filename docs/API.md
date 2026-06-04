@@ -29,9 +29,10 @@ Persisted application configuration. Serialised to `%LOCALAPPDATA%\Phonematic\co
 | `ChunkOverlap` | `int` | `100` | Character overlap between consecutive chunks. |
 | `RagTopK` | `int` | `5` | Number of top chunks returned by vector search. |
 | `MaxConcurrentPlaudDownloads` | `int` | `3` | Semaphore limit for parallel PLAUD file downloads. |
-| `LastImportPath` | `string` | `""` | Restored on startup to pre-populate the Transcribe view. |
 | `TranscriptionBackend` | `string` | `"acoustic"` | Active transcription backend: `"acoustic"` (wav2vec2 pipeline) or `"whisper"` (legacy). |
 | `UseGpuForTraining` | `bool` | `false` | When `true`, TorchSharp uses CUDA for voice model training (requires `libtorch-cuda-12.8-win-x64`). |
+| `Wav2Vec2ModelName` | `string` | `"wav2vec2-phoneme"` | Default base phone-model name; the file is `acoustic/<name>.onnx`. |
+| `Wav2Vec2ModelUrl` | `string` | HuggingFace wav2vec2 URL | Download URL for the default base phone model (configurable so different models can be fetched). |
 
 ---
 
@@ -94,7 +95,7 @@ EF Core entity. Mirrors a recording fetched from the PLAUD cloud API.
 ### `VoiceModel`
 **Namespace:** `Phonematic.Models`
 
-EF Core entity. Represents a user-created speaker adaptation model trained by `VoiceModelTrainingService`.
+EF Core entity. Represents a user-created speaker adaptation model trained via the speaker-adapter training pipeline.
 
 | Property | Type | Description |
 |---|---|---|
@@ -174,17 +175,20 @@ Downloads and locates the three AI model files required by the application.
 | `bool IsWhisperModelDownloaded(string modelSize)` | Returns `true` if the GGML binary exists on disk. |
 | `bool IsOnnxModelDownloaded()` | Returns `true` if both `model.onnx` and `vocab.txt` exist. |
 | `bool IsLlmModelDownloaded()` | Returns `true` if the Phi-3 GGUF exists. |
-| `bool IsWav2Vec2ModelDownloaded()` | Returns `true` if `acoustic/wav2vec2-phoneme.onnx` exists. |
+| `bool IsWav2Vec2ModelDownloaded()` | Returns `true` if the configured default base model (`acoustic/<Wav2Vec2ModelName>.onnx`) exists. |
+| `bool IsWav2Vec2ModelDownloaded(string name)` | Returns `true` if the named base model (`acoustic/<name>.onnx`) exists. |
 | `bool AreAllModelsReady(string whisperModelSize)` | AND of all four model checks. |
 | `string GetWhisperModelPath(string modelSize)` | Returns absolute path for a given model size key. |
 | `string GetOnnxModelPath()` | Returns absolute path to `model.onnx`. |
 | `string GetOnnxVocabPath()` | Returns absolute path to `vocab.txt`. |
 | `string GetLlmModelPath()` | Returns absolute path to the Phi-3 GGUF. |
-| `string GetWav2Vec2ModelPath()` | Returns absolute path to `acoustic/wav2vec2-phoneme.onnx`. |
+| `string GetWav2Vec2ModelPath()` | Returns absolute path to the configured default base model (`acoustic/<Wav2Vec2ModelName>.onnx`). |
+| `string GetWav2Vec2ModelPath(string name)` | Returns `acoustic/<name>.onnx`. Throws if `name` is not a simple file name (path-traversal guard). |
 | `Task DownloadWhisperModelAsync(string modelSize, IProgress<double>?, CancellationToken)` | Streams the GGML model; writes to a `.tmp` file then renames on success. Retries up to 3 times. |
 | `Task DownloadOnnxModelAsync(IProgress<double>?, CancellationToken)` | Downloads `model.onnx` and `vocab.txt`. |
 | `Task DownloadLlmModelAsync(IProgress<double>?, CancellationToken)` | Downloads the Phi-3 GGUF (up to ~2 GB). |
-| `Task DownloadWav2Vec2ModelAsync(IProgress<double>?, CancellationToken)` | Downloads `wav2vec2-phoneme.onnx`. No-ops if already present. |
+| `Task DownloadWav2Vec2ModelAsync(IProgress<double>?, CancellationToken)` | Downloads the configured default base model (name + URL from `AppConfig`). No-ops if already present. |
+| `Task DownloadWav2Vec2ModelAsync(string url, string name, IProgress<double>?, CancellationToken)` | Downloads a base model from `url` to `acoustic/<name>.onnx`. No-ops if already present. |
 
 ---
 
@@ -360,6 +364,53 @@ An `HttpListener` server on `http://localhost:27839/` that receives the PLAUD Be
 |---|---|
 | `void Start()` | Starts the `HttpListener` and begins the background listen loop. Silently ignores port-in-use errors. |
 | `void Dispose()` | Cancels the listen loop and stops the listener. |
+
+---
+
+## CLI & Speaker-Adaptation Pipeline
+
+Public types in the `Phonematic` console project that implement forced alignment, the Whisper
+hybrid, speaker-adapter training/inference, and the `.phonematic` bundle. See [CLI.md](CLI.md) for
+the end-user command reference.
+
+### Models
+
+| Type | Namespace | Shape |
+|---|---|---|
+| `WordAlignment` | `Phonematic.Models` | `record (string Orth, IReadOnlyList<PhoneAlignment> Phones)`; `TStartMs`/`TEndMs` derived from the first/last phone. |
+| `WhisperSegment` | `Phonematic.Models` | `record (string Text, int StartMs, int EndMs)` — one Whisper-recognised segment. |
+| `TrainingProgress` | `Phonematic.Models` | `record (int Epoch, int TotalEpochs, double TrainLoss, double ValidationPer, double ElapsedSeconds)`. |
+| `PhoneRecognitionResult` | `Phonematic.Models` | Recognition output; carries `Phones`, encoder `HiddenStates [frames×768]`, and raw `Logits [frames×vocab]`. |
+
+### Helpers
+
+| Member | Description |
+|---|---|
+| `CtcForcedAligner.Align(float[,] logits, IReadOnlyList<WordTarget> words, IReadOnlyList<string> vocab)` | Viterbi forced alignment over the blank-augmented CTC lattice; returns time-stamped, word-grouped `WordAlignment[]`. Falls back to an even time split when frames < labels. |
+| `PhoneTargetBuilder.BuildFromText(string transcript)` / `BuildWordTargets(IEnumerable<string>)` | Maps words to `WordTarget(string Orth, IReadOnlyList<int> LabelIndices)` (ARPAbet → TIMIT label indices via `CmuDict`/`GraphemeToPhoneme`). |
+| `PhoScriptWriter.Write(IReadOnlyList<WordAlignment> words, …, string? asrModel)` | Word-aware overload: populates `<word orth>` from known words and emits one `<sentence>` per input list. The original prosody-only overload is unchanged. |
+
+### Services
+
+| Type | Namespace | Role |
+|---|---|---|
+| `IWhisperWordRecognizer` / `WhisperWordRecognizer` | `Phonematic.Services` | `Task<IReadOnlyList<WhisperSegment>> RecognizeAsync(string wavPath, CancellationToken)`. Lean, DB-free Whisper word source for hybrid mode. `IDisposable`. |
+| `IVoiceAdapter` / `VoiceAdapter` | `Phonematic.Services` | `float[,] ComputeLogits(float[,] hiddenStates)` — applies a trained adapter, re-deriving phone logits from frozen wav2vec2 hidden states. Loaded from a `.phonematic` bundle. `IDisposable`. |
+| `IAdapterTrainer` / `AdapterTrainer` | `Phonematic.Services` | `Task<AdapterTrainingResult> TrainAsync(IReadOnlyList<TrainingPairInput> pairs, string outputPath, BaseModelInfo baseModel, int epochs, IProgress<TrainingProgress>?, CancellationToken)`. DB-free CTC training; writes a `.phonematic` bundle. |
+| `TrainingPairInput` / `AdapterTrainingResult` | `Phonematic.Services` | `record (string AudioPath, string TranscriptPath)` / `record (string ArtifactPath, double BestPhoneErrorRate)`. |
+| `AdapterModel` | `Phonematic.Services` | Shared adapter architecture constants: `HiddenDim = 768`, `AdapterDim = 256`, `PhoneVocabSize = 57`; builds the `Linear→ReLU→Dropout→Linear` `Sequential`. |
+| `VoiceModelBundle` | `Phonematic.Services` | Reads/writes the `.phonematic` ZIP (adapter weights + JSON manifest). `Save(path, adapter, baseline, baseModel)` / `LoadedVoiceModel Load(path)`. |
+| `BaseModelInfo` / `LoadedVoiceModel` | `Phonematic.Services` | `record (string Name, string Url, int VocabSize, int HiddenDim)` / loaded adapter + manifest metadata (`IDisposable`). |
+
+### CLI orchestration
+
+| Type | Namespace | Role |
+|---|---|---|
+| `IPhoScriptConverter` / `PhoScriptConverter` | `Phonematic.Cli` | `Task ConvertFileAsync(input, output, IProgress<double>?, CancellationToken, transcriptPath?, useWhisper)` — the unified per-file pipeline (transcript ▸ Whisper ▸ free decode, optional adapter). |
+| `CliRunner` | `Phonematic.Cli` | Orchestrates a `convert` invocation: validates input, checks models, resolves output paths, drives the per-file loop. Returns an `ExitCodes` value. |
+| `ModelsRunner` | `Phonematic.Cli` | Orchestrates `models download` / `models status` — the only place the CLI downloads models. |
+| `TrainRunner` | `Phonematic.Cli` | Orchestrates `train`: pair discovery, readiness checks, per-epoch progress. |
+| `ExitCodes` | `Phonematic.Cli` | `Success = 0`, `RuntimeFailure = 1`, `UsageError = 2`, `EnvironmentError = 3`. |
 
 ---
 
@@ -541,8 +592,10 @@ Shell ViewModel. Holds references to all tab ViewModels and controls setup visib
 | `SelectedTabIndex` | `int` | Currently selected tab (observable). |
 | `Transcribe` | `TranscribeViewModel?` | Child ViewModel. |
 | `Transcriptions` | `TranscriptionsViewModel?` | Child ViewModel. |
+| `Train` | `TrainViewModel?` | Child ViewModel (voice-model training tab). |
 | `Search` | `SearchViewModel?` | Child ViewModel. |
 | `Settings` | `SettingsViewModel?` | Child ViewModel. |
+| `Model` | `ModelViewModel?` | Child ViewModel (voice-model management tab). |
 | `PlaudSync` | `PlaudSyncViewModel?` | Child ViewModel. |
 | `Setup` | `SetupViewModel?` | Child ViewModel (only set when `IsSetupRequired`). |
 
@@ -574,7 +627,7 @@ Manages the Transcribe tab: file selection, batch transcription, and per-file pr
 
 **Commands:** `BrowseFileCommand`, `BrowseFolderCommand`, `StartTranscriptionCommand` (cancellable).
 
-`LoadFiles(string path)` — populates `Files` from a single audio file or an entire directory tree, saves `LastImportPath` to config.
+`LoadFiles(string path)` — populates `Files` from a single audio file or an entire directory tree.
 
 ---
 

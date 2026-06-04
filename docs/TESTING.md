@@ -31,17 +31,28 @@ dotnet test --filter "FullyQualifiedName=Phonematic.Tests.FileHasherTests.Comput
 
 | File | What it tests |
 |---|---|
+| `ActiveVoiceModelServiceTests.cs` | `ActiveVoiceModelService` — selection and state of the active voice model. |
 | `AppConfigTests.cs` | Default property values of `AppConfig`. |
 | `ArpabetToIpaTests.cs` | `ArpabetToIpa.Convert` — correct IPA for all major ARPAbet symbols, stress-digit stripping, slash-delimiter invariant, and fallback format for unknown symbols. |
 | `ChunkTextTests.cs` | `EmbeddingService.ChunkText` — sentence splitting and overlap logic. |
+| `Cli/AudioFileDiscoveryTests.cs` | `AudioFileDiscovery` — supported-extension filtering; top-level vs recursive discovery. |
+| `Cli/CliArgumentParsingTests.cs` | CLI parsing for the `convert`, `train`, and `models` options (incl. `--transcript`/`--whisper`/`--voice-model`). |
+| `Cli/CliRunnerTests.cs` | `CliRunner` — transcript pairing/forwarding, model-readiness gating, and exit-code mapping. |
+| `Cli/OutputPathResolverTests.cs` | `OutputPathResolver` — single-file default vs `-o`; directory default vs `--output-dir`; recursive subfolder mirroring. |
 | `CmuDictTests.cs` | `CmuDict.TryGetPhones` — dictionary hits for common words, case-insensitivity, punctuation stripping, miss path, and `StripPunctuation`. |
 | `ConfigServiceTests.cs` | `ConfigService` directory path computation and settings round-trip. |
 | `ConverterTests.cs` | All four Avalonia value converters (`PercentageConverter`, `FileSizeConverter`, `DurationConverter`, `InverseBoolConverter`). |
+| `CtcForcedAlignerTests.cs` | `CtcForcedAligner.Align` — Viterbi forced alignment on synthetic logits and edge cases (e.g. frames < labels fallback). |
 | `DbContextTests.cs` | `PhonematicDbContext` CRUD operations against an in-memory SQLite database. |
 | `FileHasherTests.cs` | `FileHasher.ComputeSha256Async` — hash consistency, correctness, empty file, and cancellation. |
 | `GraphemeToPhonemeTests.cs` | `GraphemeToPhoneme.Convert` — empty/punctuation-only input, common digraphs, case-insensitivity, and non-empty output invariant. |
 | `ModelManagerServiceTests.cs` | `ModelManagerService` path computation and model-presence detection. |
+| `ModelViewModelTests.cs` | `ModelViewModel` — voice-model management tab behaviour. |
 | `PhoScriptWriterTests.cs` | `PhoScriptWriter.Write`, `GetIpaPhones`, `SplitWords`, and `Escape` — document structure, LF line endings, `<phon>` children present, IPA slash delimiters, timestamp fields, and phrase-boundary attributes. |
+| `PhoneTargetBuilderTests.cs` | `PhoneTargetBuilder` — transcript → CTC label-target mapping (ARPAbet → TIMIT indices). |
+| `TrainViewModelTests.cs` | `TrainViewModel` — training tab behaviour and `(audio, transcript)` pair discovery. |
+| `VoiceModelBundleTests.cs` | `VoiceModelBundle` round-trip through TorchSharp save/load + zip/manifest, and `VoiceAdapter.ComputeLogits`. |
+| `WordAwarePhoScriptWriterTests.cs` | Word-aware `PhoScriptWriter.Write` overload — populated `<word orth>`, multiple `<sentence>` blocks, and XML well-formedness. |
 
 ## Patterns and Conventions
 
@@ -100,14 +111,14 @@ public void PercentageConverter_FormatsCorrectly(double input, string expected) 
 
 ### Testing Internal Helpers
 
-`ArpabetToIpa`, `CmuDict`, `GraphemeToPhoneme`, and `PhoScriptWriter` expose several `internal` methods (e.g. `GetIpaPhones`, `SplitWords`, `Escape`, `StripPunctuation`, `BareIpa`) that are tested directly. The main project exposes them to the test project via:
+`ArpabetToIpa`, `CmuDict`, `GraphemeToPhoneme`, and `PhoScriptWriter` expose several `internal` methods (e.g. `GetIpaPhones`, `SplitWords`, `Escape`, `StripPunctuation`, `BareIpa`) that are tested directly. These helpers live in the `Phonematic` project, which exposes its internals to the test project via:
 
 ```csharp
-// src/Phonematic.Gui/Properties/AssemblyInfo.cs
+// src/Phonematic/Properties/AssemblyInfo.cs
 [assembly: InternalsVisibleTo("Phonematic.Tests")]
 ```
 
-This avoids wrapping every `internal` method in a `public` shim while still enabling direct unit testing of the helper logic.
+`Phonematic.Gui` carries the same attribute in `src/Phonematic.Gui/Properties/AssemblyInfo.cs` for the GUI-only internals it tests. This avoids wrapping every `internal` method in a `public` shim while still enabling direct unit testing of the helper logic.
 
 ## Adding New Tests
 

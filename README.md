@@ -53,7 +53,7 @@ For those who trust no one (we respect that):
 ```bash
 git clone https://github.com/davidpizon/Phonematic.git
 cd Phonematic
-dotnet build -c Release
+dotnet build src/Phonematic.slnx -c Release
 dotnet run --project src/Phonematic.Gui/Phonematic.Gui.csproj
 ```
 
@@ -225,6 +225,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for a detailed description of a
 |---|---|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture, data flows, DB schema, file layout |
 | [docs/API.md](docs/API.md) | Full reference for all classes, interfaces, and records |
+| [docs/CLI.md](docs/CLI.md) | Command-line interface: synopsis, flags, examples, and exit codes |
 | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Development workflow, coding standards, PR checklist |
 | [docs/TESTING.md](docs/TESTING.md) | Test suite structure, patterns, and how to run tests |
 | [docs/AGENTS.md](docs/AGENTS.md) | Guidelines for AI coding agents working on this repo |
