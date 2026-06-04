@@ -16,6 +16,7 @@ public sealed class TrainRunner
 {
     private readonly IModelManagerService _models;
     private readonly IAdapterTrainer _trainer;
+    private readonly BaseModelInfo _baseModel;
     private readonly TextWriter _stdout;
     private readonly TextWriter _stderr;
     private readonly bool _quiet;
@@ -23,12 +24,14 @@ public sealed class TrainRunner
     public TrainRunner(
         IModelManagerService models,
         IAdapterTrainer trainer,
+        BaseModelInfo baseModel,
         TextWriter stdout,
         TextWriter stderr,
         bool quiet)
     {
         _models = models;
         _trainer = trainer;
+        _baseModel = baseModel;
         _stdout = stdout;
         _stderr = stderr;
         _quiet = quiet;
@@ -49,11 +52,11 @@ public sealed class TrainRunner
             return ExitCodes.UsageError;
         }
 
-        if (!_models.IsWav2Vec2ModelDownloaded())
+        if (!_models.IsWav2Vec2ModelDownloaded(_baseModel.Name))
         {
-            Error("Required wav2vec2 phoneme model is not downloaded.");
-            Error($"Expected at: {_models.GetWav2Vec2ModelPath()}");
-            Error("Download it via the Phonematic GUI setup wizard. The CLI never downloads models.");
+            Error($"Base model '{_baseModel.Name}' is not downloaded.");
+            Error($"Expected at: {_models.GetWav2Vec2ModelPath(_baseModel.Name)}");
+            Error($"Fetch it with: phonematic models download --name {_baseModel.Name}");
             return ExitCodes.EnvironmentError;
         }
 
@@ -70,7 +73,7 @@ public sealed class TrainRunner
 
         try
         {
-            var result = await _trainer.TrainAsync(pairs, options.Output, options.Epochs, progress, ct);
+            var result = await _trainer.TrainAsync(pairs, options.Output, _baseModel, options.Epochs, progress, ct);
             _stdout.WriteLine(result.ArtifactPath);
             Info($"Wrote {result.ArtifactPath} (best phone error rate: {result.BestPhoneErrorRate:P1}).");
             return ExitCodes.Success;

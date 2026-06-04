@@ -25,8 +25,19 @@ internal sealed class CliCommandBuilder
     public Argument<string> PairsDirArgument { get; }
     public Option<string> TrainOutputOption { get; }
     public Option<int> EpochsOption { get; }
+    public Option<string?> TrainBaseModelOption { get; }
     public Option<bool> TrainRecursiveOption { get; }
     public Option<bool> TrainQuietOption { get; }
+
+    // `models` subcommand
+    public Command ModelsCommand { get; }
+    public Command ModelsDownloadCommand { get; }
+    public Command ModelsStatusCommand { get; }
+    public Option<string?> DlNameOption { get; }
+    public Option<string?> DlUrlOption { get; }
+    public Option<bool> DlWhisperOption { get; }
+    public Option<string?> DlWhisperModelOption { get; }
+    public Option<bool> DlQuietOption { get; }
 
     public CliCommandBuilder()
     {
@@ -108,6 +119,10 @@ internal sealed class CliCommandBuilder
             Description = "Number of training epochs (default 50).",
             DefaultValueFactory = _ => 50,
         };
+        TrainBaseModelOption = new Option<string?>("--base-model")
+        {
+            Description = "Base-model name to train against (default: app config). Recorded in the output bundle.",
+        };
         TrainRecursiveOption = new Option<bool>("--recursive", "-r")
         {
             Description = "Recurse into subdirectories when discovering training pairs.",
@@ -123,10 +138,46 @@ internal sealed class CliCommandBuilder
             PairsDirArgument,
             TrainOutputOption,
             EpochsOption,
+            TrainBaseModelOption,
             TrainRecursiveOption,
             TrainQuietOption,
         };
         RootCommand.Subcommands.Add(TrainCommand);
+
+        // ---- models subcommand: phonematic models download | status ----
+        DlNameOption = new Option<string?>("--name")
+        {
+            Description = "Base-model name to store/fetch under (default: app config).",
+        };
+        DlUrlOption = new Option<string?>("--url")
+        {
+            Description = "Source URL for the base model (default: app config).",
+        };
+        DlWhisperOption = new Option<bool>("--whisper")
+        {
+            Description = "Also download the Whisper model used by hybrid mode.",
+        };
+        DlWhisperModelOption = new Option<string?>("--whisper-model")
+        {
+            Description = "Whisper model size for --whisper (default: app config).",
+        };
+        DlQuietOption = new Option<bool>("--quiet", "-q")
+        {
+            Description = "Suppress download progress output.",
+        };
+
+        ModelsDownloadCommand = new Command(
+            "download", "Download the base model (and optionally the Whisper model).")
+        {
+            DlNameOption, DlUrlOption, DlWhisperOption, DlWhisperModelOption, DlQuietOption,
+        };
+        ModelsStatusCommand = new Command("status", "Show which models are present on disk.");
+        ModelsCommand = new Command("models", "Download and inspect models.")
+        {
+            ModelsDownloadCommand,
+            ModelsStatusCommand,
+        };
+        RootCommand.Subcommands.Add(ModelsCommand);
 
         // Default no-op action so the root parses without requiring a subcommand (the convert path).
         // Program overrides this via SetHandler; tests parse without setting a handler.
@@ -157,6 +208,7 @@ internal sealed class CliCommandBuilder
         PairsDir = parseResult.GetValue(PairsDirArgument)!,
         Output = parseResult.GetValue(TrainOutputOption)!,
         Epochs = parseResult.GetValue(EpochsOption),
+        BaseModel = parseResult.GetValue(TrainBaseModelOption),
         Recursive = parseResult.GetValue(TrainRecursiveOption),
         Quiet = parseResult.GetValue(TrainQuietOption),
     };
@@ -164,4 +216,23 @@ internal sealed class CliCommandBuilder
     /// <summary>Wires the <c>train</c> subcommand's action to <paramref name="run"/>.</summary>
     public void SetTrainHandler(Func<TrainOptions, CancellationToken, Task<int>> run)
         => TrainCommand.SetAction((parseResult, ct) => run(BindTrain(parseResult), ct));
+
+    /// <summary>Projects a successful <see cref="ParseResult"/> into <see cref="ModelsDownloadOptions"/>.</summary>
+    public ModelsDownloadOptions BindModelsDownload(ParseResult parseResult) => new()
+    {
+        Name = parseResult.GetValue(DlNameOption),
+        Url = parseResult.GetValue(DlUrlOption),
+        Whisper = parseResult.GetValue(DlWhisperOption),
+        WhisperModel = parseResult.GetValue(DlWhisperModelOption),
+        Quiet = parseResult.GetValue(DlQuietOption),
+    };
+
+    /// <summary>Wires the <c>models download</c> and <c>models status</c> subcommand actions.</summary>
+    public void SetModelsHandlers(
+        Func<ModelsDownloadOptions, CancellationToken, Task<int>> download,
+        Func<CancellationToken, Task<int>> status)
+    {
+        ModelsDownloadCommand.SetAction((parseResult, ct) => download(BindModelsDownload(parseResult), ct));
+        ModelsStatusCommand.SetAction((_, ct) => status(ct));
+    }
 }

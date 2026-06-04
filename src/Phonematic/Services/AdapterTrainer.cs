@@ -20,17 +20,26 @@ public sealed class AdapterTrainer : IAdapterTrainer
     private const double EarlyStopPer = 0.05; // stop when validation PER ≤ 5 %
 
     private readonly IAcousticPhoneRecognizerService _recognizer;
+    private readonly IAcousticFeatureExtractorService _featureExtractor;
 
-    public AdapterTrainer(IAcousticPhoneRecognizerService recognizer) => _recognizer = recognizer;
+    public AdapterTrainer(
+        IAcousticPhoneRecognizerService recognizer,
+        IAcousticFeatureExtractorService featureExtractor)
+    {
+        _recognizer = recognizer;
+        _featureExtractor = featureExtractor;
+    }
 
     /// <inheritdoc/>
     public async Task<AdapterTrainingResult> TrainAsync(
         IReadOnlyList<TrainingPairInput> pairs,
         string outputPath,
+        BaseModelInfo baseModel,
         int epochs = 50,
         IProgress<TrainingProgress>? progress = null,
         CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(baseModel);
         ArgumentNullException.ThrowIfNull(pairs);
         ArgumentException.ThrowIfNullOrWhiteSpace(outputPath);
         if (pairs.Count == 0)
@@ -39,8 +48,10 @@ public sealed class AdapterTrainer : IAdapterTrainer
 
         var sw = Stopwatch.StartNew();
 
-        // 1. Extract hidden-state features + phone labels once.
+        // 1. Extract hidden-state features + phone labels once; accumulate frames for the speaker baseline.
         var items = new List<(float[,] HiddenStates, int[] Labels)>();
+        var speakerFrames = new List<AcousticFeatureFrame>();
+        var totalPhones = 0;
         foreach (var pair in pairs)
         {
             ct.ThrowIfCancellationRequested();
@@ -54,8 +65,12 @@ public sealed class AdapterTrainer : IAdapterTrainer
                 var recognition = await _recognizer.RecognizeAsync(wav, ct);
                 var text = await File.ReadAllTextAsync(pair.TranscriptPath, ct);
                 var labels = PhoneTargetBuilder.Flatten(PhoneTargetBuilder.BuildFromText(text));
-                if (labels.Length > 0)
-                    items.Add((recognition.HiddenStates, labels));
+                if (labels.Length == 0)
+                    continue;
+
+                items.Add((recognition.HiddenStates, labels));
+                speakerFrames.AddRange(await _featureExtractor.ExtractFramesAsync(wav, ct));
+                totalPhones += labels.Length;
             }
             finally
             {
@@ -68,6 +83,8 @@ public sealed class AdapterTrainer : IAdapterTrainer
 
         if (items.Count == 0)
             throw new InvalidOperationException("No valid training items after feature extraction.");
+
+        var baseline = _featureExtractor.ComputeSpeakerBaseline(speakerFrames, totalPhones);
 
         // 2. Train the adapter head with CTC loss.
         using var adapter = AdapterModel.Build();
@@ -113,9 +130,7 @@ public sealed class AdapterTrainer : IAdapterTrainer
             if (valPer < bestPer || epoch == 1)
             {
                 bestPer = valPer;
-                var dir = Path.GetDirectoryName(Path.GetFullPath(outputPath));
-                if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-                adapter.save(outputPath);
+                VoiceModelBundle.Save(outputPath, adapter, baseline, baseModel);
             }
 
             if (valPer <= EarlyStopPer) break;

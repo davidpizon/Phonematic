@@ -17,12 +17,13 @@ public sealed record AdapterTrainingResult(string ArtifactPath, double BestPhone
 public interface IAdapterTrainer
 {
     /// <summary>
-    /// Trains an adapter from <paramref name="pairs"/> and saves the best checkpoint to
-    /// <paramref name="outputPath"/>.
+    /// Trains an adapter from <paramref name="pairs"/> against <paramref name="baseModel"/> and saves
+    /// the best checkpoint as a self-contained <c>.phonematic</c> bundle at <paramref name="outputPath"/>.
     /// </summary>
     Task<AdapterTrainingResult> TrainAsync(
         IReadOnlyList<TrainingPairInput> pairs,
         string outputPath,
+        BaseModelInfo baseModel,
         int epochs = 50,
         IProgress<TrainingProgress>? progress = null,
         CancellationToken ct = default);

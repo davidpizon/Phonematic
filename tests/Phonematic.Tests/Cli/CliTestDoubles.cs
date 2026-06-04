@@ -66,4 +66,6 @@ internal sealed class FakeModelManager : IModelManagerService
         => throw new NotSupportedException();
     public Task DownloadWav2Vec2ModelAsync(IProgress<double>? progress = null, CancellationToken ct = default)
         => throw new NotSupportedException();
+    public Task DownloadWav2Vec2ModelAsync(string url, string name, IProgress<double>? progress = null, CancellationToken ct = default)
+        => throw new NotSupportedException();
 }

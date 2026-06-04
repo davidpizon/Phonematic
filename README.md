@@ -108,6 +108,97 @@ Browse and read all previously transcribed files. Select any entry to view its f
 3. Select recordings and click **Download Selected** to save them locally.
 4. Downloaded files can then be queued for transcription on the Transcribe tab.
 
+## Command-Line Interface (CLI)
+
+Phonematic also ships a headless `audio → PhoScript (.phos)` converter for scripts and automation.
+Examples below use the `Phonematic` command; from source, substitute
+`dotnet run --project src/Phonematic/Phonematic.csproj -- <args>`. Result paths print to **stdout**;
+progress and logs go to **stderr**. Full flag/exit-code reference: [docs/CLI.md](docs/CLI.md).
+
+### Convert a single file
+
+```bash
+# Default: writes song.phos next to the source
+Phonematic song.mp3
+
+# Explicit output path
+Phonematic song.mp3 -o transcripts/song.phos
+```
+
+### Convert a folder
+
+```bash
+# Every supported audio file in the folder (top level only), .phos next to each source
+Phonematic ./recordings
+
+# Recurse into subfolders, mirror the tree into ./out, overwrite existing targets
+Phonematic ./recordings --recursive --output-dir ./out --overwrite
+
+# Quiet mode — capture just the written paths
+Phonematic ./recordings -q > written.txt
+```
+
+### Forced alignment with a known transcript
+
+Supply the exact words spoken; the phones are aligned to them so `<word orth="…">` matches your text.
+
+```bash
+# Single file + its transcript
+Phonematic interview.mp3 --transcript interview.txt -o interview.phos
+
+# Folder: each audio file is paired with its sibling <name>.txt automatically
+Phonematic ./recordings --recursive
+```
+
+### Whisper hybrid (no transcript on hand)
+
+Whisper supplies the words; wav2vec2 forced-aligns the phones.
+
+```bash
+# Use the default (config) Whisper model size
+Phonematic lecture.mp3 --whisper
+
+# Pick a larger Whisper model for the whole folder
+Phonematic ./recordings --whisper --whisper-model small
+```
+
+### Apply a trained speaker model
+
+```bash
+# Improve recognition of a known speaker's new, transcript-less audio
+Phonematic new-recording.mp3 --voice-model models/speaker-A.phonematic -o out.phos
+
+# Batch a folder through the same speaker model
+Phonematic ./recordings -r --voice-model models/speaker-A.phonematic --output-dir ./out
+```
+
+### Train a speaker model (`train`)
+
+Learns a portable `.phonematic` model from `(audio, sibling-<name>.txt)` pairs.
+
+```bash
+# Train from a folder of recordings + matching transcripts
+Phonematic train ./speaker-A --output models/speaker-A.phonematic --recursive
+
+# Different speaker, more epochs, an explicitly chosen base model
+Phonematic train ./speaker-B -o models/speaker-B.phonematic --epochs 80 --base-model wav2vec2-phoneme
+```
+
+### Manage models (`models`)
+
+The only commands that download. Conversion/training otherwise exit `3` if a model is missing.
+
+```bash
+# Download the default base model
+Phonematic models download
+
+# Download a base model AND a Whisper model for hybrid mode
+Phonematic models download --whisper --whisper-model small
+
+# See which models are present on disk
+Phonematic models status
+```
+
 ## Architecture
 
 ```

@@ -21,6 +21,7 @@ public sealed class CliRunner
     private readonly TextWriter _stderr;
     private readonly bool _quiet;
     private readonly string _whisperModelSize;
+    private readonly string? _baseModelName;
 
     public CliRunner(
         IPhoScriptConverter converter,
@@ -29,7 +30,8 @@ public sealed class CliRunner
         TextWriter stdout,
         TextWriter stderr,
         bool quiet,
-        string? whisperModelSize = null)
+        string? whisperModelSize = null,
+        string? baseModelName = null)
     {
         _converter = converter;
         _models = models;
@@ -38,6 +40,7 @@ public sealed class CliRunner
         _stderr = stderr;
         _quiet = quiet;
         _whisperModelSize = string.IsNullOrWhiteSpace(whisperModelSize) ? "base" : whisperModelSize;
+        _baseModelName = baseModelName;
     }
 
     /// <summary>Runs the conversion and returns the process exit code (see <see cref="ExitCodes"/>).</summary>
@@ -205,18 +208,25 @@ public sealed class CliRunner
     // Helpers
     // ------------------------------------------------------------------
 
+    private bool BaseModelReady() =>
+        _baseModelName is null
+            ? _models.IsWav2Vec2ModelDownloaded()
+            : _models.IsWav2Vec2ModelDownloaded(_baseModelName);
+
     private bool ModelReady(CliOptions options) =>
-        _models.IsWav2Vec2ModelDownloaded()
+        BaseModelReady()
         && (!options.UseWhisper || _models.IsWhisperModelDownloaded(_whisperModelSize));
 
     private void PrintModelInstructions(CliOptions options)
     {
-        if (!_models.IsWav2Vec2ModelDownloaded())
+        if (!BaseModelReady())
         {
+            var path = _baseModelName is null
+                ? _models.GetWav2Vec2ModelPath()
+                : _models.GetWav2Vec2ModelPath(_baseModelName);
             Error("Required wav2vec2 phoneme model is not downloaded.");
-            Error($"Expected at: {_models.GetWav2Vec2ModelPath()}");
-            Error("Download it via the Phonematic GUI setup wizard, or place the model file at the");
-            Error("path above. The CLI never downloads models automatically.");
+            Error($"Expected at: {path}");
+            Error("Fetch it with `phonematic models download`, or place the model file at the path above.");
         }
 
         if (options.UseWhisper && !_models.IsWhisperModelDownloaded(_whisperModelSize))

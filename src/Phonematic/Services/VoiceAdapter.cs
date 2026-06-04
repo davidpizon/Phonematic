@@ -1,10 +1,11 @@
+using Phonematic.Models;
 using TorchSharp.Modules;
 using static TorchSharp.torch;
 
 namespace Phonematic.Services;
 
 /// <summary>
-/// Loads a trained speaker adapter from a <c>.phonematic</c> artefact and applies it at inference,
+/// Loads a trained speaker adapter from a <c>.phonematic</c> bundle and applies it at inference,
 /// re-deriving phone logits from frozen wav2vec2 hidden states. Not thread-safe; the CLI converts
 /// files sequentially. Implements <see cref="IVoiceAdapter"/>.
 /// </summary>
@@ -12,15 +13,19 @@ public sealed class VoiceAdapter : IVoiceAdapter
 {
     private readonly Sequential _module;
 
-    /// <summary>Loads the adapter weights from <paramref name="modelPath"/> (a <c>.phonematic</c> file).</summary>
+    /// <summary>The base model this adapter was trained against (from the bundle manifest).</summary>
+    public BaseModelInfo BaseModel { get; }
+
+    /// <summary>The speaker baseline stored in the bundle.</summary>
+    public SpeakerBaseline Baseline { get; }
+
+    /// <summary>Loads the adapter from <paramref name="modelPath"/> (a <c>.phonematic</c> bundle).</summary>
     public VoiceAdapter(string modelPath)
     {
-        if (!File.Exists(modelPath))
-            throw new FileNotFoundException("Voice model (.phonematic) not found.", modelPath);
-
-        _module = AdapterModel.Build();
-        _module.load(modelPath);  // loads by parameter name into the matching architecture
-        _module.eval();           // disable dropout for inference
+        var loaded = VoiceModelBundle.Load(modelPath);
+        _module = loaded.Adapter;
+        BaseModel = loaded.BaseModel;
+        Baseline = loaded.Baseline;
     }
 
     /// <inheritdoc/>
