@@ -73,7 +73,7 @@ public sealed class WhisperWordRecognizer : IWhisperWordRecognizer
             var modelPath = _modelManager.GetWhisperModelPath(_modelSize);
             if (!File.Exists(modelPath))
                 throw new FileNotFoundException(
-                    $"Whisper model '{_modelSize}' not found. Run model setup first.", modelPath);
+                    $"Whisper model '{_modelSize}' not found. Download it with `phonematic models download --whisper`.", modelPath);
 
             _factory = WhisperFactory.FromPath(modelPath);
             _processor = _factory.CreateBuilder()

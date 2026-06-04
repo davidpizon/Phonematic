@@ -88,8 +88,11 @@ internal static class Program
         var cfg = config.Load();
 
         var baseName = string.IsNullOrWhiteSpace(options.BaseModel) ? cfg.Wav2Vec2ModelName : options.BaseModel!;
+        // The configured URL is only known to match the default base model; for a named --base-model
+        // we have no per-model URL registry, so record it as unknown rather than a possibly-wrong URL.
+        var baseUrl = string.Equals(baseName, cfg.Wav2Vec2ModelName, StringComparison.Ordinal) ? cfg.Wav2Vec2ModelUrl : "";
         var baseModel = new BaseModelInfo(
-            baseName, cfg.Wav2Vec2ModelUrl, AdapterModel.PhoneVocabSize, AdapterModel.HiddenDim);
+            baseName, baseUrl, AdapterModel.PhoneVocabSize, AdapterModel.HiddenDim);
 
         using IAcousticPhoneRecognizerService recognizer =
             new AcousticPhoneRecognizerService(models, models.GetWav2Vec2ModelPath(baseName));

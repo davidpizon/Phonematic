@@ -11,8 +11,8 @@ public sealed record AdapterTrainingResult(string ArtifactPath, double BestPhone
 /// <summary>
 /// Trains a speaker-adaptation head (see <see cref="AdapterModel"/>) on frozen wav2vec2 hidden
 /// states using CTC loss against phone labels derived from each transcript, and writes the result
-/// as a <c>.phonematic</c> artefact. Database-free so it can be driven from the CLI; the GUI's
-/// <c>VoiceModelTrainingService</c> supplies pairs from its database.
+/// as a <c>.phonematic</c> artefact. Database-free so it can be driven directly from the CLI
+/// <c>train</c> command, which supplies (audio, transcript) pairs discovered from the file system.
 /// </summary>
 public interface IAdapterTrainer
 {

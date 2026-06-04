@@ -9,7 +9,7 @@ public sealed record PhoneRecognitionResult(
     IReadOnlyList<PhoneAlignment> Phones,
     /// <summary>
     /// Encoder hidden states shaped [frames × 768]. Used as features for speaker-adapter
-    /// fine-tuning in <see cref="Phonematic.Services.VoiceModelTrainingService"/>.
+    /// fine-tuning in <see cref="Phonematic.Services.IAdapterTrainer"/>.
     /// </summary>
     float[,] HiddenStates,
     /// <summary>

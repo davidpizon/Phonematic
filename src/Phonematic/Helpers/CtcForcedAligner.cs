@@ -84,7 +84,7 @@ public static class CtcForcedAligner
         const double NegInf = double.NegativeInfinity;
         var prev = new double[states];
         var cur = new double[states];
-        var bp = new byte[(long)frames * states]; // back-pointer: 0=stay, 1=from s-1, 2=from s-2
+        var bp = new byte[checked(frames * states)]; // int length; long arithmetic used for indexing below
 
         for (var s = 0; s < states; s++) prev[s] = NegInf;
         prev[0] = logp[0, ext[0]];                 // start on the leading blank …

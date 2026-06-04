@@ -140,7 +140,7 @@ public sealed class AdapterTrainer : IAdapterTrainer
     }
 
     // ------------------------------------------------------------------
-    // Training internals (lifted from the GUI's VoiceModelTrainingService)
+    // Training internals (originally factored out of the former GUI training service)
     // ------------------------------------------------------------------
 
     private static (Tensor loss, Tensor logProbs) ForwardPass(

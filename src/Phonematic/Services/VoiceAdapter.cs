@@ -42,7 +42,9 @@ public sealed class VoiceAdapter : IVoiceAdapter
         using var _ = no_grad();
         using var input = tensor(flat, [frames, hidden]);
         using var output = _module.forward(input);            // [frames, vocab], raw logits
-        var data = output.to_type(ScalarType.Float32).cpu().data<float>().ToArray();
+        using var f32 = output.to_type(ScalarType.Float32);
+        using var cpu = f32.cpu();
+        var data = cpu.data<float>().ToArray();
 
         var logits = new float[frames, AdapterModel.PhoneVocabSize];
         Buffer.BlockCopy(data, 0, logits, 0, data.Length * sizeof(float));

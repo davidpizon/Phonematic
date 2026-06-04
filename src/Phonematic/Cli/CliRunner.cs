@@ -86,9 +86,16 @@ public sealed class CliRunner
             return ExitCodes.UsageError;
         }
 
-        if (!ModelReady(options))
+        if (!string.IsNullOrWhiteSpace(options.TranscriptPath) && !File.Exists(options.TranscriptPath))
         {
-            PrintModelInstructions(options);
+            Error($"Transcript file not found: {options.TranscriptPath}");
+            return ExitCodes.UsageError;
+        }
+
+        var transcriptAvailable = !string.IsNullOrWhiteSpace(options.TranscriptPath);
+        if (!ModelReady(options, transcriptAvailable))
+        {
+            PrintModelInstructions(options, transcriptAvailable);
             return ExitCodes.EnvironmentError;
         }
 
@@ -129,9 +136,11 @@ public sealed class CliRunner
 
     private async Task<int> RunDirectoryAsync(CliOptions options, CancellationToken ct)
     {
-        if (!ModelReady(options))
+        // Sibling transcripts are resolved per file, so we can't guarantee every file has one;
+        // require the Whisper model up front whenever --whisper is set.
+        if (!ModelReady(options, transcriptAvailable: false))
         {
-            PrintModelInstructions(options);
+            PrintModelInstructions(options, transcriptAvailable: false);
             return ExitCodes.EnvironmentError;
         }
 
@@ -213,11 +222,16 @@ public sealed class CliRunner
             ? _models.IsWav2Vec2ModelDownloaded()
             : _models.IsWav2Vec2ModelDownloaded(_baseModelName);
 
-    private bool ModelReady(CliOptions options) =>
-        BaseModelReady()
-        && (!options.UseWhisper || _models.IsWhisperModelDownloaded(_whisperModelSize));
+    // Transcript ▸ Whisper ▸ free decode: a Whisper model is only needed when --whisper is set
+    // and no transcript is available to drive forced alignment.
+    private bool WhisperRequired(CliOptions options, bool transcriptAvailable) =>
+        options.UseWhisper && !transcriptAvailable;
 
-    private void PrintModelInstructions(CliOptions options)
+    private bool ModelReady(CliOptions options, bool transcriptAvailable) =>
+        BaseModelReady()
+        && (!WhisperRequired(options, transcriptAvailable) || _models.IsWhisperModelDownloaded(_whisperModelSize));
+
+    private void PrintModelInstructions(CliOptions options, bool transcriptAvailable)
     {
         if (!BaseModelReady())
         {
@@ -229,11 +243,11 @@ public sealed class CliRunner
             Error("Fetch it with `phonematic models download`, or place the model file at the path above.");
         }
 
-        if (options.UseWhisper && !_models.IsWhisperModelDownloaded(_whisperModelSize))
+        if (WhisperRequired(options, transcriptAvailable) && !_models.IsWhisperModelDownloaded(_whisperModelSize))
         {
             Error($"Whisper model '{_whisperModelSize}' is not downloaded (required by --whisper).");
             Error($"Expected at: {_models.GetWhisperModelPath(_whisperModelSize)}");
-            Error("Download it via the Phonematic GUI setup wizard, or omit --whisper.");
+            Error("Fetch it with `phonematic models download --whisper`, or omit --whisper.");
         }
     }
 
