@@ -15,9 +15,19 @@ public interface IPhoScriptConverter
     /// <param name="outputPhosPath">Destination <c>.phos</c> file path.</param>
     /// <param name="progress">Optional per-file progress reporter (0.0–1.0).</param>
     /// <param name="ct">Cancellation token.</param>
+    /// <param name="transcriptPath">
+    /// Optional path to a plain-text file with the exact words spoken. When supplied, the phones
+    /// are forced-aligned to those words (exact <c>orth</c>); takes precedence over Whisper.
+    /// </param>
+    /// <param name="useWhisper">
+    /// When <see langword="true"/> and no <paramref name="transcriptPath"/> is given, Whisper
+    /// supplies the words (hybrid mode). Requires a Whisper recognizer to be configured.
+    /// </param>
     Task ConvertFileAsync(
         string inputAudioPath,
         string outputPhosPath,
         IProgress<double>? progress,
-        CancellationToken ct);
+        CancellationToken ct,
+        string? transcriptPath = null,
+        bool useWhisper = false);
 }

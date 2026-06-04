@@ -14,9 +14,14 @@ Thank you for your interest in contributing! Please read these guidelines before
 ```bash
 git clone https://github.com/davidpizon/Phonematic.git
 cd Phonematic
-dotnet build
-dotnet test
+dotnet build src/Phonematic.slnx -c Release
+dotnet test src/Phonematic.slnx -c Release
 ```
+
+> **Note:** the solution lives at `src/Phonematic.slnx` (there is no root-level solution),
+> and its **Debug** configuration intentionally skips the `Phonematic` and `Phonematic.Gui`
+> projects — build/test in **Release** (as above), or target the test project directly with
+> `dotnet test tests/Phonematic.Tests`, which builds all three transitively.
 
 On first run the application will download three AI model files (~500 MB total for the default `tiny.en` configuration). Models are cached in `%LOCALAPPDATA%\Phonematic\models\`.
 
@@ -44,7 +49,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for a full description of layers and data
 1. Fork the repository and create a feature branch off `main`.
 2. Make changes following the coding standards below.
 3. Add or update tests in `tests/Phonematic.Tests/`.
-4. Run `dotnet build` and `dotnet test` — both must pass.
+4. Run `dotnet build src/Phonematic.slnx -c Release` and `dotnet test src/Phonematic.slnx -c Release` — both must pass.
 5. Open a pull request against `main` with a focused description.
 
 ## Coding Standards
@@ -131,8 +136,8 @@ Update Whisper model download retry logic
 
 ## Pull Request Checklist
 
-- [ ] `dotnet build` passes with no errors or warnings.
-- [ ] `dotnet test` passes.
+- [ ] `dotnet build src/Phonematic.slnx -c Release` passes with no errors or warnings.
+- [ ] `dotnet test src/Phonematic.slnx -c Release` passes.
 - [ ] New public APIs are documented in [API.md](API.md).
 - [ ] Architectural changes are reflected in [ARCHITECTURE.md](ARCHITECTURE.md).
 - [ ] PhoScript format changes are reflected in [PHOSCRIPT.md](PHOSCRIPT.md).

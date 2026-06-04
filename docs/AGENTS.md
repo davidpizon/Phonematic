@@ -54,18 +54,18 @@ Phonematic/                    ← Solution root (Phonematic.slnx)
 │   ├── Phonematic/            ← Console CLI + shared services (.NET 10) → Phonematic.dll/exe
 │   │   ├── Program.cs         ← CLI entry point (System.CommandLine)
 │   │   ├── Cli/               ← CLI orchestration (CliRunner, options, path resolver, progress)
-│   │   ├── Helpers/           ← Shared static helpers (AudioConverter, CtcDecoder, TimitToIpa, PhoScriptWriter)
+│   │   ├── Helpers/           ← Shared static helpers (AudioConverter, CtcDecoder, TimitToIpa, PhoScriptWriter, CtcForcedAligner, PhoneTargetBuilder, CmuDict, GraphemeToPhoneme, ArpabetToIpa, PhoScriptWriterLegacy)
 │   │   ├── Models/            ← Shared data models (AppConfig, PhoneAlignment, AcousticFeatureFrame, SpeakerBaseline, …)
-│   │   └── Services/          ← Shared services (ConfigService, ModelManagerService, acoustic recognizer + feature extractor)
+│   │   └── Services/          ← Shared services (ConfigService, ModelManagerService, acoustic recognizer + feature extractor, Transcription, AdapterTrainer, VoiceAdapter, VoiceModelBundle, WhisperWordRecognizer)
 │   └── Phonematic.Gui/        ← Avalonia GUI (.NET 10) → Phonematic.Gui.dll/exe; references Phonematic
 │       ├── App.axaml.cs       ← DI composition root and app bootstrap
 │       ├── Program.cs         ← Entry point, fatal error handling
 │       ├── Converters/        ← Avalonia IValueConverter implementations
 │       ├── Data/              ← EF Core DbContext
-│       ├── Helpers/           ← GUI-only helpers (CmuDict, G2P, ArpabetToIpa, PhoScriptWriterLegacy, FileHasher)
+│       ├── Helpers/           ← GUI-only helpers (FileHasher)
 │       ├── Migrations/        ← EF Core migration files
 │       ├── Models/            ← GUI-only data models (ProcessedFile, VoiceModel, etc.)
-│       ├── Services/          ← GUI-only services (Transcription, Embedding, LLM, Plaud, training, …)
+│       ├── Services/          ← GUI-only services (Embedding, LLM, Plaud, VoiceModelService, ActiveVoiceModel, …)
 │       ├── ViewModels/        ← MVVM ViewModels (CommunityToolkit.Mvvm)
 │       └── Views/             ← Avalonia XAML views and code-behind
 ├── tests/

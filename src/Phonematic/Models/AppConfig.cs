@@ -72,4 +72,19 @@ public class AppConfig
     /// training (requires <c>libtorch-cuda-12.8-win-x64</c>). Defaults to <see langword="false"/>.
     /// </summary>
     public bool UseGpuForTraining { get; set; } = false;
+
+    /// <summary>
+    /// Default base wav2vec2 phone-model name. The model file is stored as
+    /// <c>models/acoustic/&lt;name&gt;.onnx</c>. Speaker models record the base name they were
+    /// trained against so the matching base is used at conversion time. Defaults to
+    /// <c>"wav2vec2-phoneme"</c>.
+    /// </summary>
+    public string Wav2Vec2ModelName { get; set; } = "wav2vec2-phoneme";
+
+    /// <summary>
+    /// Download URL for the default base wav2vec2 phone model. Configurable so different phone
+    /// models can be fetched without code changes.
+    /// </summary>
+    public string Wav2Vec2ModelUrl { get; set; } =
+        "https://huggingface.co/facebook/wav2vec2-base-960h/resolve/main/onnx/model_quantized.onnx";
 }

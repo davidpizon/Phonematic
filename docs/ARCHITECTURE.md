@@ -27,8 +27,9 @@ The shared, model-agnostic acoustic code lives in the **`Phonematic`** console p
 `AudioConverter`, `CtcDecoder`, `TimitToIpa`, the acoustic `PhoScriptWriter.Write` overload,
 `AcousticPhoneRecognizerService`, `AcousticFeatureExtractorService`, plus `ConfigService` and
 `ModelManagerService` (for locating/checking models). The Whisper-legacy IPA path —
-`CmuDict`, `GraphemeToPhoneme`, `ArpabetToIpa`, and `PhoScriptWriterLegacy.WriteLegacy` — stays
-in `Phonematic.Gui`, since the acoustic pipeline does not use it.
+`CmuDict`, `GraphemeToPhoneme`, `ArpabetToIpa`, and `PhoScriptWriterLegacy.WriteLegacy` — also
+lives in `Phonematic` (moved there alongside `TranscriptionService`), so both products share one
+implementation; the acoustic pipeline itself does not use it.
 
 The **CLI** is a stateless file→file converter: it does **not** write to SQLite or compute
 embeddings. Per file it runs `AudioConverter.ConvertToWavAsync` →
@@ -63,16 +64,16 @@ bar uses `Spectre.Console` (rendered to stderr, with result paths on stdout). Se
 ├───────────────────────────────────────────────────────┤
 │                    ViewModels (MVVM)                  │
 │  MainWindowViewModel · TranscribeViewModel            │
-│  TranscriptionsViewModel · SearchViewModel            │
-│  SettingsViewModel · SetupViewModel                   │
-│  PlaudSyncViewModel                                   │
+│  TranscriptionsViewModel · TrainViewModel             │
+│  SearchViewModel · SettingsViewModel                  │
+│  ModelViewModel · PlaudSyncViewModel · SetupViewModel │
 ├───────────────────────────────────────────────────────┤
 │                      Services                         │
 │  ConfigService · ModelManagerService                  │
 │  TranscriptionService · EmbeddingService              │
 │  AcousticFeatureExtractorService                      │
 │  AcousticPhoneRecognizerService                       │
-│  VoiceModelTrainingService · VoiceModelService        │
+│  VoiceModelService                                    │
 │  VectorSearchService · LlmService                     │
 │  FileTrackingService · PlaudApiService                │
 │  TokenListenerService                                 │

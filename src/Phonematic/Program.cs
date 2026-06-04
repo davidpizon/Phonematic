@@ -17,6 +17,8 @@ internal static class Program
     {
         var builder = new CliCommandBuilder();
         builder.SetHandler(RunAsync);
+        builder.SetTrainHandler(RunTrainAsync);
+        builder.SetModelsHandlers(RunModelsDownloadAsync, RunModelsStatusAsync);
 
         var parseResult = builder.RootCommand.Parse(args);
 
@@ -36,10 +38,34 @@ internal static class Program
     {
         IConfigService config = new ConfigService();
         IModelManagerService models = new ModelManagerService(config);
+        var cfg = config.Load();
 
-        using IAcousticPhoneRecognizerService recognizer = new AcousticPhoneRecognizerService(models);
+        if (!string.IsNullOrWhiteSpace(options.VoiceModelPath) && !File.Exists(options.VoiceModelPath))
+        {
+            await Console.Error.WriteLineAsync($"error: Voice model not found: {options.VoiceModelPath}");
+            return ExitCodes.UsageError;
+        }
+
+        var whisperModelSize = string.IsNullOrWhiteSpace(options.WhisperModel)
+            ? cfg.WhisperModelSize
+            : options.WhisperModel;
+
+        // Optional speaker adapter; its bundle records which base model to run on.
+        using var voiceAdapter = string.IsNullOrWhiteSpace(options.VoiceModelPath)
+            ? null
+            : new VoiceAdapter(options.VoiceModelPath!);
+        var baseName = voiceAdapter?.BaseModel.Name ?? cfg.Wav2Vec2ModelName;
+
+        using IAcousticPhoneRecognizerService recognizer =
+            new AcousticPhoneRecognizerService(models, models.GetWav2Vec2ModelPath(baseName));
         IAcousticFeatureExtractorService featureExtractor = new AcousticFeatureExtractorService();
-        IPhoScriptConverter converter = new PhoScriptConverter(recognizer, featureExtractor);
+
+        using IWhisperWordRecognizer? whisper = options.UseWhisper
+            ? new WhisperWordRecognizer(models, config, whisperModelSize)
+            : null;
+
+        IPhoScriptConverter converter = new PhoScriptConverter(
+            recognizer, featureExtractor, voiceAdapter, whisper);
 
         IProgressDisplay progress = options.Quiet
             ? new NullProgressDisplay()
@@ -50,8 +76,46 @@ internal static class Program
             }));
 
         var runner = new CliRunner(
-            converter, models, progress, Console.Out, Console.Error, options.Quiet);
+            converter, models, progress, Console.Out, Console.Error, options.Quiet, whisperModelSize, baseName);
 
         return await runner.RunAsync(options, ct);
+    }
+
+    private static async Task<int> RunTrainAsync(TrainOptions options, CancellationToken ct)
+    {
+        IConfigService config = new ConfigService();
+        IModelManagerService models = new ModelManagerService(config);
+        var cfg = config.Load();
+
+        var baseName = string.IsNullOrWhiteSpace(options.BaseModel) ? cfg.Wav2Vec2ModelName : options.BaseModel!;
+        // The configured URL is only known to match the default base model; for a named --base-model
+        // we have no per-model URL registry, so record it as unknown rather than a possibly-wrong URL.
+        var baseUrl = string.Equals(baseName, cfg.Wav2Vec2ModelName, StringComparison.Ordinal) ? cfg.Wav2Vec2ModelUrl : "";
+        var baseModel = new BaseModelInfo(
+            baseName, baseUrl, AdapterModel.PhoneVocabSize, AdapterModel.HiddenDim);
+
+        using IAcousticPhoneRecognizerService recognizer =
+            new AcousticPhoneRecognizerService(models, models.GetWav2Vec2ModelPath(baseName));
+        IAcousticFeatureExtractorService featureExtractor = new AcousticFeatureExtractorService();
+        IAdapterTrainer trainer = new AdapterTrainer(recognizer, featureExtractor);
+
+        var runner = new TrainRunner(models, trainer, baseModel, Console.Out, Console.Error, options.Quiet);
+        return await runner.RunAsync(options, ct);
+    }
+
+    private static async Task<int> RunModelsDownloadAsync(ModelsDownloadOptions options, CancellationToken ct)
+    {
+        IConfigService config = new ConfigService();
+        IModelManagerService models = new ModelManagerService(config);
+        var runner = new ModelsRunner(models, config, Console.Out, Console.Error);
+        return await runner.DownloadAsync(options, ct);
+    }
+
+    private static async Task<int> RunModelsStatusAsync(CancellationToken ct)
+    {
+        IConfigService config = new ConfigService();
+        IModelManagerService models = new ModelManagerService(config);
+        var runner = new ModelsRunner(models, config, Console.Out, Console.Error);
+        return await runner.StatusAsync(ct);
     }
 }

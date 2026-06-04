@@ -26,6 +26,52 @@ All notable changes to Phonematic are documented here.
   reporting are not reasonably hand-rolled. (The unused `Spectre.Console.Cli` placeholder
   reference was removed.)
 
+#### Model management, portable speaker-model bundles, all transcription logic in the CLI
+
+- **`models` subcommand (explicit downloads).** `phonematic models download [--name] [--url]
+  [--whisper] [--whisper-model]` is now the single place the CLI downloads models; `models status`
+  reports presence. `convert`/`train` still exit `3` if a model is missing (never download as a
+  side effect).
+- **Configurable, named base models.** `AppConfig.Wav2Vec2ModelName`/`Wav2Vec2ModelUrl`;
+  `ModelManagerService` and `AcousticPhoneRecognizerService` accept a named/explicit base model
+  (`acoustic/<name>.onnx`), so different speakers can be trained/decoded against different bases.
+- **Self-contained `.phonematic` bundle (`VoiceModelBundle`).** The speaker model is now a ZIP
+  holding the adapter weights + a JSON manifest (speaker baseline + base-model identity + dims).
+  One file is the portable import/export unit; `train` writes it (`--base-model <name>` selects the
+  base, recorded in the manifest) and `convert --voice-model <bundle>` loads the recorded base
+  automatically. `AdapterTrainer` now also computes the speaker baseline during feature extraction.
+- **All transcription logic moved into the CLI (`Phonematic`) project.** Relocated
+  `TranscriptionService`/`ITranscriptionService` and `PhoScriptWriterLegacy` from `Phonematic.Gui`
+  → `Phonematic` (GUI still consumes them via its project reference). **Deleted** the unused
+  `VoiceModelTrainingService`/`IVoiceModelTrainingService` (not registered in DI, no consumer; the
+  shared `AdapterTrainer` is the single training implementation).
+
+#### Accurate words: forced alignment, Whisper hybrid, and CLI training
+
+- **Forced alignment (`-t, --transcript <file>`).** When the exact words are known, the CLI now
+  constrains decoding to those words via a Viterbi CTC forced aligner (`CtcForcedAligner`) instead
+  of free-guessing. The resulting `.phos` carries the real words in `<word orth>` with audio-derived
+  timing. In directory mode, a sibling `<name>.txt` next to each audio file is used automatically.
+- **Whisper hybrid (`--whisper`, `--whisper-model <size>`).** For transcript-less audio, Whisper
+  supplies the words and sentence segmentation (one `<sentence>` per segment) while wav2vec2
+  forced-aligns the phones within each word. New `WhisperWordRecognizer` (lean, DB-free) reuses the
+  already-referenced `Whisper.net`.
+- **Speaker adaptation applied at inference (`--voice-model <file>`).** Trained `.phonematic`
+  adapters are now actually used during recognition (`VoiceAdapter` re-derives logits from wav2vec2
+  hidden states), improving transcript-less accuracy for the adapted speaker. Previously adapters
+  were trained but never applied.
+- **CLI training (`Phonematic train <pairs-dir> --output model.phonematic [--epochs N] [-r]`).**
+  New database-free `AdapterTrainer` (lifted from the GUI's training core) trains a speaker adapter
+  from many (audio, sibling-`.txt`) pairs; phone-label targets come from a new `PhoneTargetBuilder`
+  that maps ARPAbet directly to TIMIT labels (no lossy IPA round-trip).
+- **Supporting changes:** `PhoneRecognitionResult` now also exposes raw `Logits`; a new word-aware
+  `PhoScriptWriter.Write` overload populates `orth` and emits multiple `<sentence>` blocks; the CMU
+  dictionary / G2P / ARPAbet→IPA helpers (and `cmudict.dict`) and `TrainingProgress` moved into the
+  shared `Phonematic` project. `TorchSharp-cpu`/`libtorch-cpu` were added to the console project for
+  training and adapter inference.
+  - The shared `AdapterTrainer` is the single training implementation (the GUI's unused
+    `VoiceModelTrainingService` duplicate was removed — see the model-management section above).
+
 #### Project restructure — shared acoustic pipeline
 
 - **Renamed the Avalonia app project to `Phonematic.Gui`** (assembly `Phonematic.Gui`) and moved
@@ -38,9 +84,10 @@ All notable changes to Phonematic are documented here.
     `ModelManagerService`/`IModelManagerService`.
   - Models: `AppConfig`, `PhoneAlignment`, `AcousticFeatureFrame`, `SpeakerBaseline`,
     `PhoneRecognitionResult`.
-- The Whisper-legacy IPA path is **not** shared: the `WriteLegacy` overload was split out into
-  `PhoScriptWriterLegacy` in `Phonematic.Gui` (alongside `CmuDict`, `GraphemeToPhoneme`,
-  `ArpabetToIpa`), since the acoustic pipeline does not use it.
+- The Whisper-legacy IPA path was split out of the acoustic `PhoScriptWriter` into
+  `PhoScriptWriterLegacy`. It now lives in the shared `Phonematic` project (alongside `CmuDict`,
+  `GraphemeToPhoneme`, `ArpabetToIpa` — see the model-management relocation section above), so both
+  products can use it; the acoustic pipeline itself does not.
 - `Phonematic.Gui` now references `Phonematic` and resolves the migrated services through its
   existing DI; GUI behaviour is unchanged.
 
@@ -62,10 +109,7 @@ All notable changes to Phonematic are documented here.
   Extracts per-frame pitch (F0), RMS energy, zero-crossing rate, and harmonic-to-noise ratio from a 16 kHz mono WAV file using NWaves `PitchExtractor` and `TimeDomainFeaturesExtractor`. Returns `IReadOnlyList<AcousticFeatureFrame>`.
 
 - **`AcousticPhoneRecognizerService`** (`Services/AcousticPhoneRecognizerService.cs`)  
-  Runs a wav2vec2 ONNX model to produce phone-level alignments (`PhoneAlignment` records with IPA symbols and millisecond timestamps). TIMIT 44-phone vocabulary embedded internally.
-
-- **`VoiceModelTrainingService`** (`Services/VoiceModelTrainingService.cs`)  
-  Trains a two-layer TorchSharp adapter (Linear → ReLU → Dropout → Linear) on top of frozen wav2vec2 hidden states using CTC loss. Saves the best checkpoint to `voice_models/<id>/adapter.phonematic`.
+  Runs a wav2vec2 ONNX model to produce phone-level alignments (`PhoneAlignment` records with IPA symbols and millisecond timestamps). TIMIT 57-phone vocabulary (index 0 = CTC blank) embedded internally.
 
 - **`VoiceModelService`** / **`IVoiceModelService`**  
   CRUD service for `VoiceModel` entities. Lists, creates, renames, and deletes voice models and their associated training pairs.
@@ -170,7 +214,7 @@ Replaced non-existent types with their actual NWaves 0.9.6 equivalents:
 | `CS0101` — duplicate `PhoScriptWriter` class | Removed the duplicate class body that was left in the file after the acoustic overload was prepended. |
 | `CS0111` — duplicate `GetIpaPhones`, `SplitWords`, `Escape` members | Same root cause as above; resolved by the duplicate class removal. |
 | `CS0535` — `ModelManagerService` did not implement `IsWav2Vec2ModelDownloaded`, `GetWav2Vec2ModelPath`, `DownloadWav2Vec2ModelAsync` | Implemented all three members. |
-| `CS0246` — `Sequential`, `CTCLoss` not found in `VoiceModelTrainingService` | Corrected to `TorchSharp.Modules.Sequential` and `torch.nn.CTCLoss(...)`. |
+| `CS0246` — `Sequential`, `CTCLoss` not found in the TorchSharp adapter training code | Corrected to `TorchSharp.Modules.Sequential` and `torch.nn.CTCLoss(...)`. |
 | `CS0246` — `PitchExtractorOptions`, `YinPitchExtractor`, `EnergyExtractor` not found | Replaced with correct NWaves 0.9.6 types (see above). |
 | `CS7036` — `PhoScriptWriter.Write` missing `baseline` argument in `TranscriptionService` | Caller updated to `WriteLegacy`. |
 | `CS0103` — `log_softmax` not in scope | Replaced with `torch.nn.functional.log_softmax(...)`. |

@@ -21,11 +21,12 @@ namespace Phonematic.Services;
 public sealed class AcousticPhoneRecognizerService : IAcousticPhoneRecognizerService
 {
     private readonly IModelManagerService _modelManager;
+    private readonly string? _modelPath;
     private InferenceSession? _session;
     private readonly object _lock = new();
 
-    // TIMIT vocabulary (index 0 = CTC blank). Public so VoiceModelTrainingService
-    // (in Phonematic.Gui) can reference it across the project boundary.
+    // TIMIT vocabulary (index 0 = CTC blank). Public so the adapter training code
+    // (AdapterTrainer) and the forced aligner can share the same phone label set.
     public static readonly IReadOnlyList<string> Vocabulary = new[]
     {
         "<pad>",  // CTC blank — index 0
@@ -48,9 +49,10 @@ public sealed class AcousticPhoneRecognizerService : IAcousticPhoneRecognizerSer
     /// Initialises the service. The ONNX session is not loaded until the first
     /// call to <see cref="RecognizeAsync"/>.
     /// </summary>
-    public AcousticPhoneRecognizerService(IModelManagerService modelManager)
+    public AcousticPhoneRecognizerService(IModelManagerService modelManager, string? modelPath = null)
     {
         _modelManager = modelManager;
+        _modelPath = modelPath;
     }
 
     /// <inheritdoc/>
@@ -88,10 +90,10 @@ public sealed class AcousticPhoneRecognizerService : IAcousticPhoneRecognizerSer
         lock (_lock)
         {
             if (_session is not null) return;
-            var modelPath = _modelManager.GetWav2Vec2ModelPath();
+            var modelPath = _modelPath ?? _modelManager.GetWav2Vec2ModelPath();
             if (!File.Exists(modelPath))
                 throw new FileNotFoundException(
-                    "wav2vec2 phoneme ONNX model not found. Run model setup first.", modelPath);
+                    "wav2vec2 phoneme ONNX model not found. Download it with `phonematic models download`.", modelPath);
 
             var options = new SessionOptions { InterOpNumThreads = 1, IntraOpNumThreads = 4 };
             _session = new InferenceSession(modelPath, options);
@@ -141,7 +143,7 @@ public sealed class AcousticPhoneRecognizerService : IAcousticPhoneRecognizerSer
             hiddenStates = new float[frames, 768];
         }
 
-        return new PhoneRecognitionResult(phones, hiddenStates);
+        return new PhoneRecognitionResult(phones, hiddenStates, logits);
     }
 
     private static float[] LoadNormalisedSamples(string wavPath)
