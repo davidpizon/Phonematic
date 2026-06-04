@@ -25,8 +25,8 @@ public sealed class AcousticPhoneRecognizerService : IAcousticPhoneRecognizerSer
     private InferenceSession? _session;
     private readonly object _lock = new();
 
-    // TIMIT vocabulary (index 0 = CTC blank). Public so VoiceModelTrainingService
-    // (in Phonematic.Gui) can reference it across the project boundary.
+    // TIMIT vocabulary (index 0 = CTC blank). Public so the adapter training code
+    // (AdapterTrainer) and the forced aligner can share the same phone label set.
     public static readonly IReadOnlyList<string> Vocabulary = new[]
     {
         "<pad>",  // CTC blank — index 0
