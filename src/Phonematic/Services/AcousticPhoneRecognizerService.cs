@@ -27,6 +27,7 @@ public sealed class AcousticPhoneRecognizerService : IAcousticPhoneRecognizerSer
 
     // TIMIT vocabulary (index 0 = CTC blank). Public so the adapter training code
     // (AdapterTrainer) and the forced aligner can share the same phone label set.
+    /// <summary>TIMIT phone vocabulary used by this recognizer (index 0 is the CTC blank <c>&lt;pad&gt;</c>).</summary>
     public static readonly IReadOnlyList<string> Vocabulary = new[]
     {
         "<pad>",  // CTC blank — index 0
@@ -84,6 +85,7 @@ public sealed class AcousticPhoneRecognizerService : IAcousticPhoneRecognizerSer
     // Private helpers
     // ------------------------------------------------------------------
 
+    /// <summary>Lazily loads the ONNX inference session on first use; thread-safe via double-checked locking.</summary>
     private void EnsureSession()
     {
         if (_session is not null) return;
@@ -100,6 +102,7 @@ public sealed class AcousticPhoneRecognizerService : IAcousticPhoneRecognizerSer
         }
     }
 
+    /// <summary>Runs synchronous ONNX inference on <paramref name="samples"/> and decodes the output into a <see cref="PhoneRecognitionResult"/>.</summary>
     private PhoneRecognitionResult RunInference(float[] samples)
     {
         // Build input tensor [1, T]
@@ -146,6 +149,7 @@ public sealed class AcousticPhoneRecognizerService : IAcousticPhoneRecognizerSer
         return new PhoneRecognitionResult(phones, hiddenStates, logits);
     }
 
+    /// <summary>Reads a WAV file and normalises the samples to the [-1, 1] range expected by wav2vec2.</summary>
     private static float[] LoadNormalisedSamples(string wavPath)
     {
         using var reader = new AudioFileReader(wavPath);

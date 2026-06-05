@@ -9,6 +9,12 @@ using System.Diagnostics;
 
 namespace Phonematic.ViewModels;
 
+/// <summary>
+/// ViewModel for the <c>PLAUD Sync</c> tab.
+/// Authenticates with the PLAUD API (via browser extension or manual token paste),
+/// fetches the user's recording list, persists new recordings to the local database,
+/// and downloads audio files concurrently with progress reporting.
+/// </summary>
 public partial class PlaudSyncViewModel : ViewModelBase
 {
     private readonly IPlaudApiService _plaudApi;
@@ -17,57 +23,73 @@ public partial class PlaudSyncViewModel : ViewModelBase
     private readonly TokenListenerService _tokenListener;
     private CancellationTokenSource? _downloadCts;
 
+    /// <summary>Gets or sets a value indicating whether a sync operation is currently running.</summary>
     [ObservableProperty]
     private bool _isSyncing;
 
+    /// <summary>Gets or sets a value indicating whether a batch download is currently running.</summary>
     [ObservableProperty]
     private bool _isDownloading;
 
+    /// <summary>Gets or sets the status message shown in the UI.</summary>
     [ObservableProperty]
     private string _statusText = string.Empty;
 
+    /// <summary>Gets or sets the total number of recordings known to the local database.</summary>
     [ObservableProperty]
     private int _totalCount;
 
+    /// <summary>Gets or sets the number of recordings that have been downloaded.</summary>
     [ObservableProperty]
     private int _downloadedCount;
 
+    /// <summary>Gets or sets the number of recordings still pending download.</summary>
     [ObservableProperty]
     private int _pendingCount;
 
+    /// <summary>Gets or sets the number of recordings whose download failed.</summary>
     [ObservableProperty]
     private int _failedCount;
 
+    /// <summary>Gets or sets the overall batch download progress (0–1).</summary>
     [ObservableProperty]
     private double _overallProgress;
 
+    /// <summary>Gets or sets the maximum number of simultaneous file downloads.</summary>
     [ObservableProperty]
     private int _maxConcurrentDownloads = 3;
 
+    /// <summary>Gets or sets a value indicating whether the recordings list contains any items.</summary>
     [ObservableProperty]
     private bool _hasRecordings;
 
+    /// <summary>Gets or sets the timestamped debug-log text displayed in the diagnostic panel.</summary>
     [ObservableProperty]
     private string _debugLogText = string.Empty;
 
+    /// <summary>Gets or sets a value indicating whether the user is currently authenticated.</summary>
     [ObservableProperty]
     private bool _isLoggedIn;
 
-    // Token paste
+    /// <summary>Gets or sets the token text pasted by the user into the manual-token field.</summary>
     [ObservableProperty]
     private string _manualToken = string.Empty;
 
+    /// <summary>Gets or sets a value indicating whether the Chrome extension files have been installed.</summary>
     [ObservableProperty]
     private bool _isExtensionInstalled;
 
+    /// <summary>The ordered list of PLAUD recordings shown in the sync grid.</summary>
     public ObservableCollection<PlaudRecordingItem> Recordings { get; } = new();
 
+    /// <summary>Appends a timestamped log line to <see cref="DebugLogText"/>.</summary>
     public void Log(string message)
     {
         var line = $"[{DateTime.Now:HH:mm:ss}] {message}\n";
         DebugLogText += line;
     }
 
+    /// <summary>Initialises the ViewModel, restores any saved PLAUD token, and starts the local token-listener server.</summary>
     public PlaudSyncViewModel(
         IPlaudApiService plaudApi,
         IDbContextFactory<PhonematicDbContext> dbFactory,
@@ -102,6 +124,7 @@ public partial class PlaudSyncViewModel : ViewModelBase
         Log($"Token listener started on port {TokenListenerService.Port}");
     }
 
+    /// <summary>Persists <paramref name="token"/> to the application config.</summary>
     private void SaveToken(string token)
     {
         var config = _configService.Load();
@@ -109,6 +132,7 @@ public partial class PlaudSyncViewModel : ViewModelBase
         _configService.Save(config);
     }
 
+    /// <summary>Removes the stored PLAUD token from the application config.</summary>
     private void ClearSavedToken()
     {
         var config = _configService.Load();
@@ -116,6 +140,7 @@ public partial class PlaudSyncViewModel : ViewModelBase
         _configService.Save(config);
     }
 
+    /// <summary>Clears authentication state and prompts the user to supply a new token.</summary>
     private void HandleAuthFailure()
     {
         _plaudApi.ClearAuthToken();
@@ -125,6 +150,7 @@ public partial class PlaudSyncViewModel : ViewModelBase
         Log("Auth failed. Saved token cleared.");
     }
 
+    /// <summary>Handles a token received from the browser extension by updating auth state on the UI thread.</summary>
     private void OnTokenReceived(string token)
     {
         Avalonia.Threading.Dispatcher.UIThread.Post(() =>
@@ -137,6 +163,7 @@ public partial class PlaudSyncViewModel : ViewModelBase
         });
     }
 
+    /// <summary>Authenticates using the token pasted into <see cref="ManualToken"/>.</summary>
     [RelayCommand]
     private void UseManualToken()
     {
@@ -155,6 +182,7 @@ public partial class PlaudSyncViewModel : ViewModelBase
         StatusText = "Token set. Click Sync Recordings to fetch your recordings.";
     }
 
+    /// <summary>Clears the current authentication token and saved config entry.</summary>
     [RelayCommand]
     private void Logout()
     {
@@ -165,12 +193,15 @@ public partial class PlaudSyncViewModel : ViewModelBase
         Log("Logged out, token cleared.");
     }
 
+    /// <summary>Gets the absolute path to the deployed Chrome extension directory.</summary>
     private static string ExtensionDir => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "Phonematic", "ChromeExtension");
 
+    /// <summary>Delegate assigned by the View to copy text to the system clipboard.</summary>
     public Func<string, Task>? CopyToClipboardInteraction { get; set; }
 
+    /// <summary>Copies the <c>chrome://extensions</c> URL to the clipboard and ensures extension files are extracted.</summary>
     [RelayCommand]
     private async Task CopyExtensionsUrlAsync()
     {
@@ -183,6 +214,7 @@ public partial class PlaudSyncViewModel : ViewModelBase
         }
     }
 
+    /// <summary>Copies the local extension directory path to the clipboard for use with Chrome's "Load unpacked" dialog.</summary>
     [RelayCommand]
     private async Task CopyExtensionPathAsync()
     {
@@ -195,6 +227,7 @@ public partial class PlaudSyncViewModel : ViewModelBase
         }
     }
 
+    /// <summary>Marks the extension as installed and updates the status message.</summary>
     [RelayCommand]
     private void ExtensionInstallDone()
     {
@@ -203,6 +236,7 @@ public partial class PlaudSyncViewModel : ViewModelBase
         StatusText = "Extension ready! Click 'Open PLAUD Login' to sign in.";
     }
 
+    /// <summary>Copies the Chrome extension files from the application bundle to <see cref="ExtensionDir"/> if not already present.</summary>
     private void EnsureExtensionFilesCopied()
     {
         if (Directory.Exists(ExtensionDir) && File.Exists(Path.Combine(ExtensionDir, "manifest.json")))
@@ -225,6 +259,7 @@ public partial class PlaudSyncViewModel : ViewModelBase
         Log($"Extension files copied to: {ExtensionDir}");
     }
 
+    /// <summary>Removes the extension files from <see cref="ExtensionDir"/> and resets the installed flag.</summary>
     [RelayCommand]
     private void UninstallExtension()
     {
@@ -245,6 +280,7 @@ public partial class PlaudSyncViewModel : ViewModelBase
         }
     }
 
+    /// <summary>Opens the PLAUD web login page in the default browser.</summary>
     [RelayCommand]
     private void OpenBrowser()
     {
@@ -263,6 +299,7 @@ public partial class PlaudSyncViewModel : ViewModelBase
         }
     }
 
+    /// <summary>Fetches the latest recording list from the PLAUD API and adds new records to the local database.</summary>
     [RelayCommand]
     private async Task SyncAsync()
     {
@@ -373,6 +410,7 @@ public partial class PlaudSyncViewModel : ViewModelBase
         }
     }
 
+    /// <summary>Downloads all pending recordings to the output directory with bounded concurrency.</summary>
     [RelayCommand]
     private async Task DownloadAllAsync()
     {
@@ -494,12 +532,14 @@ public partial class PlaudSyncViewModel : ViewModelBase
         }
     }
 
+    /// <summary>Cancels the current batch download.</summary>
     [RelayCommand]
     private void Cancel()
     {
         _downloadCts?.Cancel();
     }
 
+    /// <summary>Recomputes all counter properties from the current <see cref="Recordings"/> collection.</summary>
     private void UpdateCounts()
     {
         TotalCount = Recordings.Count;
@@ -510,30 +550,46 @@ public partial class PlaudSyncViewModel : ViewModelBase
     }
 }
 
+/// <summary>
+/// Observable item representing a single PLAUD cloud recording, shown in the sync grid.
+/// Wraps a <see cref="Phonematic.Models.PlaudRecording"/> entity with bindable status and progress.
+/// </summary>
 public partial class PlaudRecordingItem : ObservableObject
 {
+    /// <summary>Gets or sets the local database primary key.</summary>
     public int Id { get; set; }
+    /// <summary>Gets or sets the PLAUD cloud file identifier.</summary>
     public string PlaudFileId { get; set; } = string.Empty;
 
+    /// <summary>Gets or sets the recording title.</summary>
     [ObservableProperty]
     private string _title = string.Empty;
 
+    /// <summary>Gets or sets the UTC time the recording was made.</summary>
     public DateTime RecordedAtUtc { get; set; }
+    /// <summary>Gets or sets the recording duration in seconds.</summary>
     public double DurationSeconds { get; set; }
+    /// <summary>Gets or sets the PLAUD folder/tag name, if any.</summary>
     public string? FolderName { get; set; }
+    /// <summary>Gets or sets the file size in bytes, if known.</summary>
     public long? FileSizeBytes { get; set; }
 
+    /// <summary>Gets or sets a value indicating whether the file has been downloaded locally.</summary>
     [ObservableProperty]
     private bool _isDownloaded;
 
+    /// <summary>Gets or sets the human-readable download status label.</summary>
     [ObservableProperty]
     private string _status = "Pending";
 
+    /// <summary>Gets or sets the per-item download progress (0–1).</summary>
     [ObservableProperty]
     private double _progress;
 
+    /// <summary>Gets the recording date formatted for display in the user's local time zone.</summary>
     public string DateDisplay => RecordedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
 
+    /// <summary>Gets the recording duration formatted as <c>h:mm:ss</c> or <c>m:ss</c>.</summary>
     public string DurationDisplay
     {
         get
@@ -545,6 +601,7 @@ public partial class PlaudRecordingItem : ObservableObject
         }
     }
 
+    /// <summary>Gets the file size formatted as a human-readable string (B / KB / MB).</summary>
     public string SizeDisplay => FileSizeBytes switch
     {
         null => "-",

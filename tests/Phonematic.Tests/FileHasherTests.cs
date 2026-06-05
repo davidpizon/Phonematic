@@ -2,23 +2,27 @@ using Phonematic.Helpers;
 
 namespace Phonematic.Tests;
 
+/// <summary>Verifies <see cref="FileHasher.ComputeSha256Async"/> consistency, correctness, and cancellation behaviour.</summary>
 public class FileHasherTests : IDisposable
 {
     private readonly string _tempFile;
 
+    /// <summary>Creates a temporary file used as the hash target for each test.</summary>
     public FileHasherTests()
     {
         _tempFile = Path.GetTempFileName();
     }
 
+    /// <summary>Returns the xUnit-provided cancellation token for the current test.</summary>
     private static CancellationToken CT => TestContext.Current.CancellationToken;
 
+    /// <summary>Deletes the temporary file created for the test.</summary>
     public void Dispose()
     {
-        if (File.Exists(_tempFile))
-            File.Delete(_tempFile);
+        try { File.Delete(_tempFile); } catch { /* best-effort */ }
     }
 
+    /// <summary>Verifies that hashing the same file content twice returns the same digest.</summary>
     [Fact]
     public async Task ComputeSha256Async_ReturnsConsistentHash()
     {
@@ -30,6 +34,7 @@ public class FileHasherTests : IDisposable
         Assert.Equal(hash1, hash2);
     }
 
+    /// <summary>Verifies that the returned hash is a 64-character lowercase hexadecimal string.</summary>
     [Fact]
     public async Task ComputeSha256Async_ReturnsCorrectHash()
     {
@@ -41,6 +46,7 @@ public class FileHasherTests : IDisposable
         Assert.Matches("^[0-9a-f]{64}$", hash);
     }
 
+    /// <summary>Verifies that different file contents produce different digests.</summary>
     [Fact]
     public async Task ComputeSha256Async_DifferentContentGivesDifferentHash()
     {
@@ -53,6 +59,7 @@ public class FileHasherTests : IDisposable
         Assert.NotEqual(hashA, hashB);
     }
 
+    /// <summary>Verifies that an empty file produces a valid 64-character hexadecimal digest.</summary>
     [Fact]
     public async Task ComputeSha256Async_EmptyFile()
     {
@@ -64,6 +71,7 @@ public class FileHasherTests : IDisposable
         Assert.Matches("^[0-9a-f]{64}$", hash);
     }
 
+    /// <summary>Verifies that pre-cancelling the token causes the operation to throw an <see cref="OperationCanceledException"/>.</summary>
     [Fact]
     public async Task ComputeSha256Async_SupportsCancellation()
     {

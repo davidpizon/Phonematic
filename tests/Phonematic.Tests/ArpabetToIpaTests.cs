@@ -2,8 +2,10 @@ using Phonematic.Helpers;
 
 namespace Phonematic.Tests;
 
+/// <summary>Verifies <see cref="ArpabetToIpa.Convert"/> symbol mapping, stress-digit stripping, and output formatting.</summary>
 public class ArpabetToIpaTests
 {
+    /// <summary>Verifies that known ARPAbet symbols (including stressed variants) map to the correct slash-delimited IPA string.</summary>
     [Theory]
     [InlineData("AH0", "/ʌ/")]
     [InlineData("AH1", "/ʌ/")]
@@ -29,6 +31,7 @@ public class ArpabetToIpaTests
         Assert.Equal(expectedIpa, ArpabetToIpa.Convert(arpabet));
     }
 
+    /// <summary>Verifies that an unknown ARPAbet symbol returns a fallback value that is still wrapped in slashes.</summary>
     [Fact]
     public void Convert_UnknownSymbol_ReturnsFallbackWithSlashes()
     {
@@ -37,6 +40,7 @@ public class ArpabetToIpaTests
         Assert.EndsWith("/", result);
     }
 
+    /// <summary>Verifies that all stress variants of the same phoneme (0, 1, 2) return the same base IPA symbol.</summary>
     [Theory]
     [InlineData("AH0")]
     [InlineData("AH1")]
@@ -46,6 +50,7 @@ public class ArpabetToIpaTests
         Assert.Equal(ArpabetToIpa.Convert("AH"), ArpabetToIpa.Convert(arpabet));
     }
 
+    /// <summary>Verifies that all common stop and fricative symbols produce output wrapped in slashes.</summary>
     [Fact]
     public void Convert_ResultAlwaysWrappedInSlashes()
     {

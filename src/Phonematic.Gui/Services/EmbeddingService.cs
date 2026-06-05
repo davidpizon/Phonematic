@@ -13,6 +13,12 @@ using Phonematic.Models;
 
 namespace Phonematic.Services;
 
+/// <summary>
+/// Generates 384-dimensional sentence embeddings using the <c>all-MiniLM-L6-v2</c> ONNX model,
+/// chunks transcription text into overlapping segments, and stores chunk embeddings in the database.
+/// Implements <see cref="IEmbeddingService"/> and <see cref="IDisposable"/>.
+/// The ONNX session is loaded lazily on the first call to <see cref="GenerateEmbedding"/>.
+/// </summary>
 public class EmbeddingService : IEmbeddingService, IDisposable
 {
     private readonly IModelManagerService _modelManager;
@@ -25,6 +31,7 @@ public class EmbeddingService : IEmbeddingService, IDisposable
     private const int MaxTokenLength = 128;
     private const int EmbeddingDimension = 384;
 
+    /// <summary>Initialises a new <see cref="EmbeddingService"/> with the required services.</summary>
     public EmbeddingService(IModelManagerService modelManager, IConfigService configService, IDbContextFactory<PhonematicDbContext> dbFactory)
     {
         _modelManager = modelManager;
@@ -32,6 +39,7 @@ public class EmbeddingService : IEmbeddingService, IDisposable
         _dbFactory = dbFactory;
     }
 
+    /// <inheritdoc/>
     public float[] GenerateEmbedding(string text)
     {
         EnsureModelLoaded();
@@ -81,6 +89,7 @@ public class EmbeddingService : IEmbeddingService, IDisposable
         return embedding;
     }
 
+    /// <inheritdoc/>
     public List<string> ChunkText(string text, int chunkSize, int chunkOverlap)
     {
         var chunks = new List<string>();
@@ -125,6 +134,7 @@ public class EmbeddingService : IEmbeddingService, IDisposable
         return chunks;
     }
 
+    /// <inheritdoc/>
     public async Task StoreChunksAsync(ProcessedFile file, string fullText, CancellationToken ct = default)
     {
         var config = _configService.Load();
@@ -154,6 +164,7 @@ public class EmbeddingService : IEmbeddingService, IDisposable
         await db.SaveChangesAsync(ct);
     }
 
+    /// <summary>Lazily loads the ONNX inference session and vocabulary on first call.</summary>
     private void EnsureModelLoaded()
     {
         if (_session != null) return;
@@ -170,6 +181,7 @@ public class EmbeddingService : IEmbeddingService, IDisposable
         }
     }
 
+    /// <summary>Tokenises <paramref name="text"/> with WordPiece subword tokenisation; returns a <c>[CLS]…[SEP]</c>-bounded token-id array.</summary>
     private long[] Tokenize(string text)
     {
         // Simple WordPiece-style tokenization
@@ -220,11 +232,13 @@ public class EmbeddingService : IEmbeddingService, IDisposable
         return tokens.ToArray();
     }
 
+    /// <summary>Returns the vocabulary id for <paramref name="token"/>, or 0 for unknown tokens.</summary>
     private long GetTokenId(string token)
     {
         return _vocab!.TryGetValue(token, out var id) ? id : 0;
     }
 
+    /// <summary>Splits <paramref name="text"/> into sentences at sentence-terminal punctuation and newline boundaries.</summary>
     private static List<string> SplitIntoSentences(string text)
     {
         var sentences = new List<string>();
@@ -250,6 +264,7 @@ public class EmbeddingService : IEmbeddingService, IDisposable
         return sentences;
     }
 
+    /// <inheritdoc/>
     public void Dispose()
     {
         if (!_disposed)

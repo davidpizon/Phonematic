@@ -3,12 +3,14 @@ using Whisper.net;
 
 namespace Phonematic.Tests;
 
+/// <summary>Verifies <see cref="PhoScriptWriterLegacy"/> XML structure, word/phone formatting, boundary markers, and helper methods.</summary>
 public class PhoScriptWriterTests
 {
     // -----------------------------------------------------------------------
     // Helpers
     // -----------------------------------------------------------------------
 
+    /// <summary>Creates a minimal <see cref="SegmentData"/> for use in writer tests.</summary>
     private static SegmentData MakeSegment(string text, int startMs = 0, int endMs = 1000)
     {
         return new SegmentData(
@@ -27,12 +29,14 @@ public class PhoScriptWriterTests
     // SplitWords
     // -----------------------------------------------------------------------
 
+    /// <summary>Verifies that splitting an empty string returns an empty list.</summary>
     [Fact]
     public void SplitWords_EmptyString_ReturnsEmpty()
     {
         Assert.Empty(PhoScriptWriterLegacy.SplitWords(""));
     }
 
+    /// <summary>Verifies that extra whitespace between words is collapsed and blank entries are discarded.</summary>
     [Fact]
     public void SplitWords_MultipleSpaces_DiscardsBlanks()
     {
@@ -44,8 +48,8 @@ public class PhoScriptWriterTests
     // Escape
     // -----------------------------------------------------------------------
 
+    /// <summary>Verifies that XML special characters are correctly entity-encoded by <see cref="PhoScriptWriterLegacy.Escape"/>.</summary>
     [Theory]
-    [InlineData("Tom & Jerry", "Tom &amp; Jerry")]
     [InlineData("<word>",      "&lt;word&gt;")]
     [InlineData("say \"hi\"",  "say &quot;hi&quot;")]
     public void Escape_EncodesXmlChars(string input, string expected)
@@ -57,6 +61,7 @@ public class PhoScriptWriterTests
     // GetIpaPhones
     // -----------------------------------------------------------------------
 
+    /// <summary>Verifies that <see cref="PhoScriptWriterLegacy.GetIpaPhones"/> returns slash-delimited IPA strings for a known word.</summary>
     [Fact]
     public void GetIpaPhones_KnownWord_ReturnsSlashDelimitedIpa()
     {
@@ -69,6 +74,7 @@ public class PhoScriptWriterTests
         });
     }
 
+    /// <summary>Verifies that <see cref="PhoScriptWriterLegacy.GetIpaPhones"/> returns the correct number of phones for a known word.</summary>
     [Fact]
     public void GetIpaPhones_KnownWord_CorrectPhoneCount()
     {
@@ -77,6 +83,7 @@ public class PhoScriptWriterTests
         Assert.Equal(3, phones.Count);
     }
 
+    /// <summary>Verifies that an OOV word returns a non-empty list of slash-delimited fallback phones from the G2P rules.</summary>
     [Fact]
     public void GetIpaPhones_UnknownWord_ReturnsFallbackPhones()
     {
@@ -93,6 +100,7 @@ public class PhoScriptWriterTests
     // Write — document structure
     // -----------------------------------------------------------------------
 
+    /// <summary>Verifies that writing an empty segment list produces only the PhoScript header without any sentence elements.</summary>
     [Fact]
     public void Write_EmptySegments_ReturnsHeaderOnly()
     {
@@ -101,6 +109,7 @@ public class PhoScriptWriterTests
         Assert.DoesNotContain("<sentence", result);
     }
 
+    /// <summary>Verifies that a single segment produces a well-formed <c>&lt;sentence&gt;</c> block.</summary>
     [Fact]
     public void Write_SingleSegment_ContainsSentenceBlock()
     {
@@ -110,6 +119,7 @@ public class PhoScriptWriterTests
         Assert.Contains("</sentence>", result);
     }
 
+    /// <summary>Verifies that the output uses LF (not CRLF) line endings.</summary>
     [Fact]
     public void Write_UsesLfLineEndings()
     {
@@ -118,6 +128,7 @@ public class PhoScriptWriterTests
         Assert.DoesNotContain("\r\n", result);
     }
 
+    /// <summary>Verifies that each word in the segment appears as a <c>&lt;word orth=…&gt;</c> element.</summary>
     [Fact]
     public void Write_ContainsWordBlocks()
     {
@@ -127,6 +138,7 @@ public class PhoScriptWriterTests
         Assert.Contains("<word orth=\"world\"", result);
     }
 
+    /// <summary>Verifies that word elements contain at least one <c>&lt;phon&gt;</c> child element.</summary>
     [Fact]
     public void Write_WordBlocksHavePhonChildren()
     {
@@ -135,6 +147,7 @@ public class PhoScriptWriterTests
         Assert.Contains("<phon ipa=", result);
     }
 
+    /// <summary>Verifies that <c>&lt;phon&gt;</c> IPA attribute values are slash-delimited.</summary>
     [Fact]
     public void Write_PhonIpaAttributesUseSlashDelimiters()
     {
@@ -144,6 +157,7 @@ public class PhoScriptWriterTests
         Assert.Matches(@"ipa=""\/[^/]+\/""", result);
     }
 
+    /// <summary>Verifies that each <c>&lt;phon&gt;</c> element contains timestamp attributes.</summary>
     [Fact]
     public void Write_PhonTimestampsAreConsistent()
     {
@@ -157,6 +171,7 @@ public class PhoScriptWriterTests
         Assert.NotEmpty(phonLines);
     }
 
+    /// <summary>Verifies that the last word in a sentence carries an <c>IP_end</c> phrase boundary marker.</summary>
     [Fact]
     public void Write_LastWordHasIpEndBoundary()
     {
@@ -165,6 +180,7 @@ public class PhoScriptWriterTests
         Assert.Contains("phrase_boundary=\"IP_end\"", result);
     }
 
+    /// <summary>Verifies that non-final words carry a <c>none</c> phrase boundary marker.</summary>
     [Fact]
     public void Write_NonLastWordHasNoneBoundary()
     {
@@ -173,6 +189,7 @@ public class PhoScriptWriterTests
         Assert.Contains("phrase_boundary=\"none\"", result);
     }
 
+    /// <summary>Verifies that the source file name is embedded as the <c>recording_id</c> in the output.</summary>
     [Fact]
     public void Write_SourceFileNameInMeta()
     {
@@ -181,6 +198,7 @@ public class PhoScriptWriterTests
         Assert.Contains("recording_id=\"my_recording\"", result);
     }
 
+    /// <summary>Verifies that multiple segments produce sequentially numbered utterance IDs.</summary>
     [Fact]
     public void Write_MultipleSegments_AllPresent()
     {

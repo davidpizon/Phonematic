@@ -9,10 +9,14 @@ namespace Phonematic.Tests.Cli;
 /// </summary>
 internal sealed class FakeConverter : IPhoScriptConverter
 {
+    /// <summary>When <see langword="true"/>, <see cref="ConvertFileAsync"/> throws instead of writing the output file.</summary>
     public bool ShouldThrow { get; init; }
+    /// <summary>Records every (inputAudioPath, outputPhosPath) pair passed to <see cref="ConvertFileAsync"/>.</summary>
     public List<(string Input, string Output)> Calls { get; } = new();
+    /// <summary>Records the (transcriptPath, useWhisper) pair for each call to <see cref="ConvertFileAsync"/>.</summary>
     public List<(string? Transcript, bool UseWhisper)> WordSources { get; } = new();
 
+    /// <inheritdoc/>
     public Task ConvertFileAsync(
         string inputAudioPath,
         string outputPhosPath,
@@ -42,30 +46,48 @@ internal sealed class FakeConverter : IPhoScriptConverter
 /// </summary>
 internal sealed class FakeModelManager : IModelManagerService
 {
+    /// <summary>Controls whether <see cref="IsWav2Vec2ModelDownloaded()"/> reports the wav2vec2 model as ready.</summary>
     public bool Wav2Vec2Ready { get; init; } = true;
 
+    /// <inheritdoc/>
     public bool IsWav2Vec2ModelDownloaded() => Wav2Vec2Ready;
+    /// <inheritdoc/>
     public bool IsWav2Vec2ModelDownloaded(string name) => Wav2Vec2Ready;
+    /// <inheritdoc/>
     public string GetWav2Vec2ModelPath() => Path.Combine(Path.GetTempPath(), "wav2vec2-phoneme.onnx");
+    /// <inheritdoc/>
     public string GetWav2Vec2ModelPath(string name) => Path.Combine(Path.GetTempPath(), $"{name}.onnx");
 
+    /// <inheritdoc/>
     public bool IsWhisperModelDownloaded(string modelSize) => false;
+    /// <inheritdoc/>
     public bool IsOnnxModelDownloaded() => false;
+    /// <inheritdoc/>
     public bool IsLlmModelDownloaded() => false;
+    /// <inheritdoc/>
     public bool AreAllModelsReady(string whisperModelSize) => false;
+    /// <inheritdoc/>
     public string GetWhisperModelPath(string modelSize) => string.Empty;
+    /// <inheritdoc/>
     public string GetOnnxModelPath() => string.Empty;
+    /// <inheritdoc/>
     public string GetOnnxVocabPath() => string.Empty;
+    /// <inheritdoc/>
     public string GetLlmModelPath() => string.Empty;
 
+    /// <inheritdoc/>
     public Task DownloadWhisperModelAsync(string modelSize, IProgress<double>? progress = null, CancellationToken ct = default)
         => throw new NotSupportedException();
+    /// <inheritdoc/>
     public Task DownloadOnnxModelAsync(IProgress<double>? progress = null, CancellationToken ct = default)
         => throw new NotSupportedException();
+    /// <inheritdoc/>
     public Task DownloadLlmModelAsync(IProgress<double>? progress = null, CancellationToken ct = default)
         => throw new NotSupportedException();
+    /// <inheritdoc/>
     public Task DownloadWav2Vec2ModelAsync(IProgress<double>? progress = null, CancellationToken ct = default)
         => throw new NotSupportedException();
+    /// <inheritdoc/>
     public Task DownloadWav2Vec2ModelAsync(string url, string name, IProgress<double>? progress = null, CancellationToken ct = default)
         => throw new NotSupportedException();
 }

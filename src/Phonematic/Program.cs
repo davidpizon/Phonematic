@@ -13,6 +13,7 @@ namespace Phonematic;
 /// </summary>
 internal static class Program
 {
+    /// <summary>CLI entry point: parses arguments, maps usage errors to exit code 2, and dispatches to the appropriate handler.</summary>
     private static async Task<int> Main(string[] args)
     {
         var builder = new CliCommandBuilder();
@@ -34,6 +35,7 @@ internal static class Program
         return await parseResult.InvokeAsync();
     }
 
+    /// <summary>Handles the default (convert) subcommand: builds the acoustic pipeline and delegates to <see cref="CliRunner"/>.</summary>
     private static async Task<int> RunAsync(CliOptions options, CancellationToken ct)
     {
         IConfigService config = new ConfigService();
@@ -81,6 +83,7 @@ internal static class Program
         return await runner.RunAsync(options, ct);
     }
 
+    /// <summary>Handles the <c>train</c> subcommand: builds the training pipeline and delegates to <see cref="TrainRunner"/>.</summary>
     private static async Task<int> RunTrainAsync(TrainOptions options, CancellationToken ct)
     {
         IConfigService config = new ConfigService();
@@ -103,6 +106,7 @@ internal static class Program
         return await runner.RunAsync(options, ct);
     }
 
+    /// <summary>Handles the <c>models download</c> subcommand: downloads all configured AI models.</summary>
     private static async Task<int> RunModelsDownloadAsync(ModelsDownloadOptions options, CancellationToken ct)
     {
         IConfigService config = new ConfigService();
@@ -111,6 +115,7 @@ internal static class Program
         return await runner.DownloadAsync(options, ct);
     }
 
+    /// <summary>Handles the <c>models status</c> subcommand: prints download status for all configured AI models.</summary>
     private static async Task<int> RunModelsStatusAsync(CancellationToken ct)
     {
         IConfigService config = new ConfigService();

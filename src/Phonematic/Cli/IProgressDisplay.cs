@@ -26,18 +26,23 @@ public interface IProgressScope
 /// </summary>
 public sealed class NullProgressDisplay : IProgressDisplay
 {
+    /// <inheritdoc/>
     public Task<int> RunAsync(Func<IProgressScope, Task<int>> body, CancellationToken ct)
         => body(NullScope.Instance);
 
+    /// <summary>No-op <see cref="IProgressScope"/> that discards all task registrations.</summary>
     private sealed class NullScope : IProgressScope
     {
         public static readonly NullScope Instance = new();
+        /// <inheritdoc/>
         public IProgress<double> AddTask(string description) => NullProgress.Instance;
     }
 
+    /// <summary>No-op <see cref="IProgress{T}"/> that discards all reported values.</summary>
     private sealed class NullProgress : IProgress<double>
     {
         public static readonly NullProgress Instance = new();
+        /// <inheritdoc/>
         public void Report(double value) { }
     }
 }

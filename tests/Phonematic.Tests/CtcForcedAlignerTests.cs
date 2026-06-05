@@ -4,10 +4,12 @@ using Phonematic.Services;
 
 namespace Phonematic.Tests;
 
+/// <summary>Verifies <see cref="CtcForcedAligner.Align"/> monotonic phone assignment, word grouping, edge cases, and error handling.</summary>
 public class CtcForcedAlignerTests
 {
     private static readonly IReadOnlyList<string> Vocab = AcousticPhoneRecognizerService.Vocabulary;
 
+    /// <summary>Returns the vocabulary index for a TIMIT label, or -1 when not found.</summary>
     private static int Idx(string label) => Vocab.ToList().IndexOf(label);
 
     /// <summary>Logits [frames × vocab] where each frame strongly favours one token.</summary>
@@ -19,6 +21,7 @@ public class CtcForcedAlignerTests
         return logits;
     }
 
+    /// <summary>Verifies that a single word's phones are assigned contiguous, monotonically non-overlapping time spans.</summary>
     [Fact]
     public void Align_SingleWord_OrderedPhones_ContiguousMonotonicSpans()
     {
@@ -38,6 +41,7 @@ public class CtcForcedAlignerTests
             Assert.True(word.Phones[i].TStartMs >= word.Phones[i - 1].TEndMs); // monotonic, non-overlapping
     }
 
+    /// <summary>Verifies that multiple words are returned in input order with phones correctly partitioned between them.</summary>
     [Fact]
     public void Align_MultipleWords_GroupsPhonesByWordInOrder()
     {
@@ -54,12 +58,14 @@ public class CtcForcedAlignerTests
         Assert.Equal(2, result[1].Phones.Count);
     }
 
+    /// <summary>Verifies that an empty word list returns an empty alignment result.</summary>
     [Fact]
     public void Align_NoWords_ReturnsEmpty()
     {
         Assert.Empty(CtcForcedAligner.Align(Logits(Idx("k")), [], Vocab));
     }
 
+    /// <summary>Verifies that when there are fewer frames than labels the even-split fallback is used and every phone is still emitted.</summary>
     [Fact]
     public void Align_FewerFramesThanLabels_StillEmitsEveryPhone()
     {
@@ -71,6 +77,7 @@ public class CtcForcedAlignerTests
         Assert.Equal(3, word.Phones.Count);
     }
 
+    /// <summary>Verifies that a logit matrix whose vocabulary dimension does not match the vocab list throws an <see cref="ArgumentException"/>.</summary>
     [Fact]
     public void Align_VocabDimensionMismatch_Throws()
     {
@@ -79,6 +86,7 @@ public class CtcForcedAlignerTests
             CtcForcedAligner.Align(logits, [new WordTarget("x", [1])], Vocab));
     }
 
+    /// <summary>Verifies that a strongly-peaked logit distribution produces a phone confidence above 0.9.</summary>
     [Fact]
     public void Align_HighLogitMargin_YieldsHighConfidence()
     {

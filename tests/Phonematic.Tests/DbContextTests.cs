@@ -4,10 +4,12 @@ using Phonematic.Models;
 
 namespace Phonematic.Tests;
 
+/// <summary>Verifies <see cref="PhonematicDbContext"/> schema constraints (unique index, cascade delete) against an in-memory SQLite database.</summary>
 public class DbContextTests : IDisposable
 {
     private readonly PhonematicDbContext _db;
 
+    /// <summary>Creates an in-memory SQLite database and applies the EF Core schema.</summary>
     public DbContextTests()
     {
         var options = new DbContextOptionsBuilder<PhonematicDbContext>()
@@ -19,14 +21,17 @@ public class DbContextTests : IDisposable
         _db.Database.EnsureCreated();
     }
 
+    /// <summary>Returns the xUnit-provided cancellation token for the current test.</summary>
     private static CancellationToken CT => TestContext.Current.CancellationToken;
 
+    /// <summary>Closes and disposes the in-memory database connection.</summary>
     public void Dispose()
     {
         _db.Database.CloseConnection();
         _db.Dispose();
     }
 
+    /// <summary>Verifies that a <see cref="ProcessedFile"/> can be saved and retrieved from the database.</summary>
     [Fact]
     public async Task CanInsertAndRetrieveProcessedFile()
     {
@@ -50,6 +55,7 @@ public class DbContextTests : IDisposable
         Assert.Equal("abc123", retrieved.FileHash);
     }
 
+    /// <summary>Verifies that inserting two <see cref="ProcessedFile"/> rows with the same file path and hash throws a <see cref="DbUpdateException"/>.</summary>
     [Fact]
     public async Task UniqueConstraint_PreventseDuplicateFilePathHash()
     {
@@ -80,6 +86,7 @@ public class DbContextTests : IDisposable
         await Assert.ThrowsAsync<DbUpdateException>(() => _db.SaveChangesAsync(CT));
     }
 
+    /// <summary>Verifies that deleting a <see cref="ProcessedFile"/> cascades and removes its associated <see cref="TranscriptionChunk"/> rows.</summary>
     [Fact]
     public async Task CascadeDelete_RemovesChunks()
     {
@@ -113,6 +120,7 @@ public class DbContextTests : IDisposable
         Assert.Equal(0, await _db.TranscriptionChunks.CountAsync(CT));
     }
 
+    /// <summary>Verifies that the same file path with different hashes is permitted (two separate processing runs of the same file).</summary>
     [Fact]
     public async Task SameFilePath_DifferentHash_AllowsBoth()
     {

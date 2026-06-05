@@ -15,6 +15,7 @@ public sealed record BaseModelInfo(string Name, string Url, int VocabSize, int H
 public sealed record LoadedVoiceModel(Sequential Adapter, BaseModelInfo BaseModel, SpeakerBaseline Baseline)
     : IDisposable
 {
+    /// <summary>Disposes the underlying <see cref="Sequential"/> adapter module and its TorchSharp tensors.</summary>
     public void Dispose() => Adapter.Dispose();
 }
 
@@ -100,6 +101,7 @@ public static class VoiceModelBundle
         }
     }
 
+    /// <summary>Deserialises and returns the <see cref="BundleManifest"/> from the ZIP at <paramref name="path"/>.</summary>
     private static BundleManifest ReadManifest(string path)
     {
         if (!File.Exists(path))

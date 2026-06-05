@@ -4,6 +4,11 @@ using Whisper.net;
 
 namespace Phonematic.Services;
 
+/// <summary>
+/// Transcribes audio files to PhoScript using the Whisper speech-to-text model.
+/// Caches the loaded <see cref="WhisperProcessor"/> between calls with the same model/thread
+/// configuration. Implements <see cref="ITranscriptionService"/> and <see cref="IDisposable"/>.
+/// </summary>
 public class TranscriptionService : ITranscriptionService, IDisposable
 {
     private readonly IModelManagerService _modelManager;
@@ -15,6 +20,7 @@ public class TranscriptionService : ITranscriptionService, IDisposable
     private string? _loadedModelPath;
     private int _loadedThreadCount;
 
+    /// <summary>Initialises the service with the model manager and config service required for path resolution.</summary>
     public TranscriptionService(IModelManagerService modelManager, IConfigService configService)
     {
         _modelManager = modelManager;
@@ -22,6 +28,7 @@ public class TranscriptionService : ITranscriptionService, IDisposable
         _logPath = Path.Combine(configService.AppDataDirectory, "transcription.log");
     }
 
+    /// <summary>Writes a timestamped line to the console and appends it to the transcription log file.</summary>
     private void Log(string message)
     {
         var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {message}";
@@ -29,6 +36,7 @@ public class TranscriptionService : ITranscriptionService, IDisposable
         try { File.AppendAllText(_logPath, line + Environment.NewLine); } catch { }
     }
 
+    /// <summary>Returns the cached <see cref="WhisperProcessor"/> if the model path and thread count are unchanged; otherwise rebuilds it.</summary>
     private WhisperProcessor GetOrCreateProcessor(string modelPath, int threadCount)
     {
         if (_processor != null && _loadedModelPath == modelPath && _loadedThreadCount == threadCount)
@@ -151,6 +159,7 @@ public class TranscriptionService : ITranscriptionService, IDisposable
         }
     }
 
+    /// <summary>Disposes the cached Whisper processor and factory, freeing native resources.</summary>
     public void Dispose()
     {
         _processor?.Dispose();

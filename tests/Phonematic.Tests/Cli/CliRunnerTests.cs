@@ -11,6 +11,7 @@ public sealed class CliRunnerTests : IDisposable
 {
     private readonly List<string> _tempDirs = new();
 
+    /// <summary>Deletes all temporary directories created during the test run.</summary>
     public void Dispose()
     {
         foreach (var dir in _tempDirs)
@@ -23,6 +24,7 @@ public sealed class CliRunnerTests : IDisposable
     // Usage / environment errors
     // -------------------------------------------------------------------------
 
+    /// <summary>Verifies that a non-existent input path returns <see cref="ExitCodes.UsageError"/> and writes an error message.</summary>
     [Fact]
     public async Task NonexistentPath_ReturnsUsageError()
     {
@@ -33,6 +35,7 @@ public sealed class CliRunnerTests : IDisposable
         Assert.Contains("not found", err.ToString());
     }
 
+    /// <summary>Verifies that a file with an unsupported extension returns <see cref="ExitCodes.UsageError"/>.</summary>
     [Fact]
     public async Task UnsupportedExtension_ReturnsUsageError()
     {
@@ -46,6 +49,7 @@ public sealed class CliRunnerTests : IDisposable
         Assert.Equal(ExitCodes.UsageError, code);
     }
 
+    /// <summary>Verifies that a missing wav2vec2 model returns <see cref="ExitCodes.EnvironmentError"/> without invoking the converter.</summary>
     [Fact]
     public async Task MissingModel_ReturnsEnvironmentError()
     {
@@ -65,6 +69,7 @@ public sealed class CliRunnerTests : IDisposable
     // Single-file mode
     // -------------------------------------------------------------------------
 
+    /// <summary>Verifies that a successful single-file conversion returns <see cref="ExitCodes.Success"/> and writes the output path to stdout.</summary>
     [Fact]
     public async Task SingleFile_Success_ReturnsZero_AndWritesResultToStdout()
     {
@@ -81,6 +86,7 @@ public sealed class CliRunnerTests : IDisposable
         Assert.Contains(expectedOutput, outw.ToString());
     }
 
+    /// <summary>Verifies that an explicitly supplied <c>--output</c> path is forwarded to the converter.</summary>
     [Fact]
     public async Task SingleFile_RespectsExplicitOutputPath()
     {
@@ -97,6 +103,7 @@ public sealed class CliRunnerTests : IDisposable
         Assert.Contains(outPath, outw.ToString());
     }
 
+    /// <summary>Verifies that a converter exception returns <see cref="ExitCodes.RuntimeFailure"/> with an error message.</summary>
     [Fact]
     public async Task SingleFile_Failure_ReturnsRuntimeFailure()
     {
@@ -111,6 +118,7 @@ public sealed class CliRunnerTests : IDisposable
         Assert.Contains("Failed", err.ToString());
     }
 
+    /// <summary>Verifies that an already-existing output file is skipped when <c>--overwrite</c> is not set.</summary>
     [Fact]
     public async Task SingleFile_SkipsExistingTarget_WhenNotOverwriting()
     {
@@ -129,6 +137,7 @@ public sealed class CliRunnerTests : IDisposable
         Assert.Contains("Skipping", err.ToString());
     }
 
+    /// <summary>Verifies that an existing output file is overwritten when <c>--overwrite</c> is set.</summary>
     [Fact]
     public async Task SingleFile_OverwritesExistingTarget_WhenOverwriteSet()
     {
@@ -149,6 +158,7 @@ public sealed class CliRunnerTests : IDisposable
     // Directory mode
     // -------------------------------------------------------------------------
 
+    /// <summary>Verifies that all supported files in a directory are converted and each output path is printed to stdout.</summary>
     [Fact]
     public async Task Directory_AllSucceed_ReturnsZero_AndListsEachOutput()
     {
@@ -166,6 +176,7 @@ public sealed class CliRunnerTests : IDisposable
         Assert.Equal(2, lines.Length);
     }
 
+    /// <summary>Verifies that a partial failure still processes all files and returns <see cref="ExitCodes.RuntimeFailure"/>.</summary>
     [Fact]
     public async Task Directory_PartialFailure_ReturnsRuntimeFailure_ButProcessesAll()
     {
@@ -182,6 +193,7 @@ public sealed class CliRunnerTests : IDisposable
         Assert.Contains("2 failed", err.ToString());
     }
 
+    /// <summary>Verifies that skipped (already-existing) output files are not counted as failures.</summary>
     [Fact]
     public async Task Directory_SkippedFilesAreNotFailures()
     {
@@ -199,6 +211,7 @@ public sealed class CliRunnerTests : IDisposable
         Assert.Contains("1 succeeded, 1 skipped, 0 failed", err.ToString());
     }
 
+    /// <summary>Verifies that a directory containing no supported audio files returns <see cref="ExitCodes.Success"/> without calling the converter.</summary>
     [Fact]
     public async Task Directory_NoSupportedFiles_ReturnsZero()
     {
@@ -214,6 +227,7 @@ public sealed class CliRunnerTests : IDisposable
         Assert.Empty(outw.ToString().Trim());
     }
 
+    /// <summary>Verifies that a sibling <c>.txt</c> transcript is automatically paired with its matching audio file.</summary>
     [Fact]
     public async Task Directory_PairsAudioWithSiblingTranscript()
     {
@@ -234,6 +248,7 @@ public sealed class CliRunnerTests : IDisposable
         Assert.Null(bSource.Transcript);
     }
 
+    /// <summary>Verifies that the <c>--transcript</c> option is forwarded to the converter in single-file mode.</summary>
     [Fact]
     public async Task SingleFile_ForwardsTranscriptOption()
     {
@@ -251,6 +266,7 @@ public sealed class CliRunnerTests : IDisposable
         Assert.Equal(transcript, converter.WordSources.Single().Transcript);
     }
 
+    /// <summary>Verifies that recursive directory mode mirrors the source subfolder structure under the output directory.</summary>
     [Fact]
     public async Task Directory_Recursive_MirrorsSubfoldersUnderOutputDir()
     {
@@ -274,10 +290,12 @@ public sealed class CliRunnerTests : IDisposable
     // Helpers
     // -------------------------------------------------------------------------
 
+    /// <summary>Builds a <see cref="CliOptions"/> with the supplied values and defaults for the rest.</summary>
     private static CliOptions Options(
         string input, string? output = null, bool recursive = false, bool overwrite = false)
         => new() { Input = input, Output = output, Recursive = recursive, Overwrite = overwrite, Quiet = false };
 
+    /// <summary>Creates a <see cref="CliRunner"/> wired to in-memory stdout/stderr writers and returns all three.</summary>
     private static (CliRunner runner, StringWriter outw, StringWriter err) MakeRunner(
         IPhoScriptConverter converter, FakeModelManager models, bool quiet = false)
     {
@@ -287,6 +305,7 @@ public sealed class CliRunnerTests : IDisposable
         return (runner, outw, err);
     }
 
+    /// <summary>Creates a uniquely-named temporary directory, registers it for cleanup, and returns its path.</summary>
     private string NewTempDir()
     {
         var path = Path.Combine(Path.GetTempPath(), "phonematic-cli-" + Guid.NewGuid().ToString("N"));
@@ -295,6 +314,7 @@ public sealed class CliRunnerTests : IDisposable
         return path;
     }
 
+    /// <summary>Creates an empty file named <paramref name="fileName"/> in <paramref name="dir"/> and returns its full path.</summary>
     private static string CreateAudio(string dir, string fileName)
     {
         var path = Path.Combine(dir, fileName);

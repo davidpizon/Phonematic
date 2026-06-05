@@ -9,36 +9,62 @@ namespace Phonematic.Cli;
 /// </summary>
 internal sealed class CliCommandBuilder
 {
+    /// <summary>Positional argument for the audio file or directory input path.</summary>
     public Argument<string> InputArgument { get; }
+    /// <summary>Option for specifying the output <c>.phos</c> path or output directory.</summary>
     public Option<string?> OutputOption { get; }
+    /// <summary>Option that enables subdirectory recursion in directory mode.</summary>
     public Option<bool> RecursiveOption { get; }
+    /// <summary>Option that enables overwriting existing output files.</summary>
     public Option<bool> OverwriteOption { get; }
+    /// <summary>Option that suppresses informational progress output.</summary>
     public Option<bool> QuietOption { get; }
+    /// <summary>Option for supplying a transcript file path (single-file mode).</summary>
     public Option<string?> TranscriptOption { get; }
+    /// <summary>Option for supplying a <c>.phonematic</c> voice model path.</summary>
     public Option<string?> VoiceModelOption { get; }
+    /// <summary>Option that enables Whisper hybrid transcription for files without a transcript.</summary>
     public Option<bool> WhisperOption { get; }
+    /// <summary>Option for selecting the Whisper model size used by <see cref="WhisperOption"/>.</summary>
     public Option<string?> WhisperModelOption { get; }
+    /// <summary>The root command that accepts the convert options and dispatches to subcommands.</summary>
     public RootCommand RootCommand { get; }
 
     // `train` subcommand
+    /// <summary>The <c>train</c> subcommand.</summary>
     public Command TrainCommand { get; }
+    /// <summary>Positional argument for the training pairs directory.</summary>
     public Argument<string> PairsDirArgument { get; }
+    /// <summary>Option for the output <c>.phonematic</c> model path (required).</summary>
     public Option<string> TrainOutputOption { get; }
+    /// <summary>Option for the number of training epochs.</summary>
     public Option<int> EpochsOption { get; }
+    /// <summary>Option for the base-model name used during training.</summary>
     public Option<string?> TrainBaseModelOption { get; }
+    /// <summary>Option that enables subdirectory recursion when discovering training pairs.</summary>
     public Option<bool> TrainRecursiveOption { get; }
+    /// <summary>Option that suppresses per-epoch progress output during training.</summary>
     public Option<bool> TrainQuietOption { get; }
 
     // `models` subcommand
+    /// <summary>The <c>models</c> subcommand.</summary>
     public Command ModelsCommand { get; }
+    /// <summary>The <c>models download</c> subcommand.</summary>
     public Command ModelsDownloadCommand { get; }
+    /// <summary>The <c>models status</c> subcommand.</summary>
     public Command ModelsStatusCommand { get; }
+    /// <summary>Option for the base-model name to download/store.</summary>
     public Option<string?> DlNameOption { get; }
+    /// <summary>Option for the source URL of the base model.</summary>
     public Option<string?> DlUrlOption { get; }
+    /// <summary>Option that also downloads the Whisper model.</summary>
     public Option<bool> DlWhisperOption { get; }
+    /// <summary>Option for the Whisper model size to download.</summary>
     public Option<string?> DlWhisperModelOption { get; }
+    /// <summary>Option that suppresses download progress output.</summary>
     public Option<bool> DlQuietOption { get; }
 
+    /// <summary>Builds all arguments, options, subcommands, and wires them into <see cref="RootCommand"/>.</summary>
     public CliCommandBuilder()
     {
         InputArgument = new Argument<string>("input")

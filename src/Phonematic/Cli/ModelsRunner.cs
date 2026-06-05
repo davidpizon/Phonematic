@@ -33,6 +33,7 @@ public sealed class ModelsRunner
     private readonly TextWriter _stdout;
     private readonly TextWriter _stderr;
 
+    /// <summary>Initialises the runner with the model manager, config service, and output writers.</summary>
     public ModelsRunner(IModelManagerService models, IConfigService config, TextWriter stdout, TextWriter stderr)
     {
         _models = models;
@@ -105,11 +106,13 @@ public sealed class ModelsRunner
         return Task.FromResult(ExitCodes.Success);
     }
 
+    /// <summary>Writes an informational message to stderr; suppressed when <paramref name="quiet"/> is <see langword="true"/>.</summary>
     private void Info(bool quiet, string message)
     {
         if (!quiet) _stderr.WriteLine(message);
     }
 
+    /// <summary>Returns a <see cref="ThrottledPercent"/> progress reporter, or <see langword="null"/> when quiet mode is active.</summary>
     private IProgress<double>? Reporter(bool quiet, string label) =>
         quiet ? null : new ThrottledPercent(_stderr, label);
 

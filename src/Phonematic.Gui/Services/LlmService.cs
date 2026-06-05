@@ -5,6 +5,11 @@ using LLama.Common;
 
 namespace Phonematic.Services;
 
+/// <summary>
+/// Loads the Phi-3 Mini GGUF language model via LLamaSharp and streams token-by-token answers
+/// to RAG-augmented queries. Implements <see cref="ILlmService"/> and <see cref="IDisposable"/>.
+/// The model weights are loaded lazily on the first call to <see cref="LoadModelAsync"/>.
+/// </summary>
 public class LlmService : ILlmService, IDisposable
 {
     private readonly IModelManagerService _modelManager;
@@ -12,13 +17,16 @@ public class LlmService : ILlmService, IDisposable
     private LLamaContext? _context;
     private bool _disposed;
 
+    /// <inheritdoc/>
     public bool IsModelLoaded => _model != null;
 
+    /// <summary>Initialises a new <see cref="LlmService"/> with the model manager used to resolve the GGUF path.</summary>
     public LlmService(IModelManagerService modelManager)
     {
         _modelManager = modelManager;
     }
 
+    /// <inheritdoc/>
     public async Task LoadModelAsync(CancellationToken ct = default)
     {
         if (_model != null) return;
@@ -38,6 +46,7 @@ public class LlmService : ILlmService, IDisposable
         }, ct);
     }
 
+    /// <inheritdoc/>
     public async IAsyncEnumerable<string> GenerateAnswerAsync(
         string question,
         List<SearchResult> context,
@@ -63,6 +72,7 @@ public class LlmService : ILlmService, IDisposable
         }
     }
 
+    /// <summary>Builds a Phi-3 chat-format RAG prompt from the question and retrieved context chunks.</summary>
     private static string BuildRagPrompt(string question, List<SearchResult> context)
     {
         var sb = new StringBuilder();
@@ -88,6 +98,7 @@ public class LlmService : ILlmService, IDisposable
         return sb.ToString();
     }
 
+    /// <inheritdoc/>
     public void Dispose()
     {
         if (!_disposed)

@@ -2,8 +2,10 @@ using Phonematic.Models;
 
 namespace Phonematic.Tests;
 
+/// <summary>Verifies the default property values of <see cref="AppConfig"/>.</summary>
 public class AppConfigTests
 {
+    /// <summary>Verifies that the well-known default values are sensible (the app should work out of the box without a settings file).</summary>
     [Fact]
     public void Defaults_AreReasonable()
     {
@@ -17,6 +19,7 @@ public class AppConfigTests
         Assert.Contains("Phonematic", config.OutputDirectory);
     }
 
+    /// <summary>Verifies that <see cref="AppConfig.ThreadCount"/> defaults to half the logical processor count (minimum 1).</summary>
     [Fact]
     public void ThreadCount_DefaultsToHalfProcessorCount()
     {

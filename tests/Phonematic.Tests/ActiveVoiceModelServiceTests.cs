@@ -78,6 +78,7 @@ public class ActiveVoiceModelServiceTests
         }
     }
 
+    /// <summary>Verifies that loading a second file replaces the first active model.</summary>
     [Fact]
     public void LoadFromFile_ReplacesExistingActiveModel()
     {
@@ -97,6 +98,7 @@ public class ActiveVoiceModelServiceTests
         }
     }
 
+    /// <summary>Verifies that <see cref="IActiveVoiceModelService.ActiveModelChanged"/> is raised after a successful load.</summary>
     [Fact]
     public void LoadFromFile_RaisesActiveModelChangedEvent()
     {
@@ -115,6 +117,7 @@ public class ActiveVoiceModelServiceTests
         }
     }
 
+    /// <summary>Verifies that the <see cref="IActiveVoiceModelService.ActiveModelChanged"/> event handler can read the already-updated active model.</summary>
     [Fact]
     public void LoadFromFile_RaisesActiveModelChangedEvent_WithNewModel()
     {
@@ -138,6 +141,7 @@ public class ActiveVoiceModelServiceTests
     // LoadFromFile — error cases
     // -------------------------------------------------------------------------
 
+    /// <summary>Verifies that loading a non-existent file throws <see cref="FileNotFoundException"/>.</summary>
     [Fact]
     public void LoadFromFile_ThrowsFileNotFoundException_WhenFileDoesNotExist()
     {
@@ -146,6 +150,7 @@ public class ActiveVoiceModelServiceTests
             svc.LoadFromFile(@"C:\DoesNotExist\missing.phonematic"));
     }
 
+    /// <summary>Verifies that the active model is not modified when <see cref="FileNotFoundException"/> is thrown.</summary>
     [Fact]
     public void LoadFromFile_DoesNotChangeActiveModel_WhenFileNotFound()
     {
@@ -164,6 +169,7 @@ public class ActiveVoiceModelServiceTests
     // ExportToFile — happy path
     // -------------------------------------------------------------------------
 
+    /// <summary>Verifies that <see cref="IActiveVoiceModelService.ExportToFile"/> creates the destination file.</summary>
     [Fact]
     public void ExportToFile_CopiesArtefactToDestination()
     {
@@ -183,6 +189,7 @@ public class ActiveVoiceModelServiceTests
         }
     }
 
+    /// <summary>Verifies that an existing file at the destination is overwritten during export.</summary>
     [Fact]
     public void ExportToFile_OverwritesExistingFile()
     {
@@ -208,6 +215,7 @@ public class ActiveVoiceModelServiceTests
     // ExportToFile — error cases
     // -------------------------------------------------------------------------
 
+    /// <summary>Verifies that exporting when no model file is loaded throws <see cref="InvalidOperationException"/>.</summary>
     [Fact]
     public void ExportToFile_ThrowsInvalidOperationException_WhenNoModelLoaded()
     {

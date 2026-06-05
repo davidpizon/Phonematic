@@ -4,6 +4,11 @@ using System.Text.Json;
 
 namespace Phonematic.Services;
 
+/// <summary>
+/// HTTP client wrapper for the PLAUD AI recording API. Handles authentication, listing
+/// recordings, resolving download URLs, and downloading audio files with retry/progress
+/// support. Implements <see cref="IPlaudApiService"/>.
+/// </summary>
 public class PlaudApiService : IPlaudApiService
 {
     private readonly HttpClient _httpClient;
@@ -11,11 +16,19 @@ public class PlaudApiService : IPlaudApiService
     private string _baseUrl = "https://api.plaud.ai";
     private const int MaxRetryAttempts = 3;
 
+    /// <inheritdoc/>
     public bool IsAuthenticated { get; private set; }
+
+    /// <inheritdoc/>
     public Action<string>? LogCallback { get; set; }
 
+    /// <summary>Writes <paramref name="message"/> to <see cref="LogCallback"/> if a listener is registered.</summary>
     private void Log(string message) => LogCallback?.Invoke(message);
 
+    /// <summary>
+    /// Initialises the service, configuring a primary <see cref="HttpClient"/> with app headers
+    /// and a separate download client that omits those headers (required by presigned cloud storage URLs).
+    /// </summary>
     public PlaudApiService()
     {
         _httpClient = new HttpClient();
@@ -29,6 +42,7 @@ public class PlaudApiService : IPlaudApiService
         _downloadClient.Timeout = TimeSpan.FromMinutes(30);
     }
 
+    /// <inheritdoc/>
     public void SetAuthToken(string token)
     {
         var jwt = token.Trim();
@@ -39,12 +53,14 @@ public class PlaudApiService : IPlaudApiService
         IsAuthenticated = true;
     }
 
+    /// <inheritdoc/>
     public void ClearAuthToken()
     {
         _httpClient.DefaultRequestHeaders.Authorization = null;
         IsAuthenticated = false;
     }
 
+    /// <inheritdoc/>
     public async Task<List<PlaudRecordingDto>> ListRecordingsAsync(CancellationToken ct = default)
     {
         var recordings = new List<PlaudRecordingDto>();
@@ -98,6 +114,7 @@ public class PlaudApiService : IPlaudApiService
         return recordings;
     }
 
+    /// <inheritdoc/>
     public async Task<string> GetDownloadUrlAsync(string fileId, CancellationToken ct = default)
     {
         var url = $"{_baseUrl}/file/temp-url/{fileId}";
@@ -120,6 +137,7 @@ public class PlaudApiService : IPlaudApiService
         return downloadUrl;
     }
 
+    /// <inheritdoc/>
     public async Task DownloadFileAsync(string url, string destPath, IProgress<double>? progress = null, CancellationToken ct = default)
     {
         var dlUri = new Uri(url);
@@ -187,6 +205,7 @@ public class PlaudApiService : IPlaudApiService
         }, progress, ct);
     }
 
+    /// <summary>Executes an authenticated GET to <paramref name="url"/> using <see cref="WithRetryAsync"/> and returns the JSON response body.</summary>
     private async Task<string> SendWithRetryAsync(string url, CancellationToken ct)
     {
         string result = string.Empty;
@@ -199,6 +218,11 @@ public class PlaudApiService : IPlaudApiService
         return result;
     }
 
+    /// <summary>
+    /// Sends a single GET request. Handles the PLAUD –302 regional-redirect response by
+    /// updating <see cref="_baseUrl"/> and retrying the request against the new domain.
+    /// Throws <see cref="PlaudAuthException"/> on 401/403 and <see cref="HttpRequestException"/> on other non-success responses.
+    /// </summary>
     private async Task<string> SendWithRedirectAsync(string url, CancellationToken ct)
     {
         Log($"API GET {url}");
@@ -249,6 +273,10 @@ public class PlaudApiService : IPlaudApiService
         return json;
     }
 
+    /// <summary>
+    /// Executes <paramref name="action"/> with up to <see cref="MaxRetryAttempts"/> attempts,
+    /// applying exponential back-off for transient failures detected by <see cref="IsTransient"/>.
+    /// </summary>
     private async Task WithRetryAsync(Func<Task> action, IProgress<double>? progress, CancellationToken ct)
     {
         for (int attempt = 1; ; attempt++)
@@ -268,6 +296,7 @@ public class PlaudApiService : IPlaudApiService
         }
     }
 
+    /// <summary>Returns <see langword="true"/> if <paramref name="ex"/> represents a transient network or server error that is safe to retry.</summary>
     private static bool IsTransient(Exception ex)
     {
         if (ex is HttpRequestException hrex)
@@ -284,6 +313,7 @@ public class PlaudApiService : IPlaudApiService
         return false;
     }
 
+    /// <summary>Returns <paramref name="s"/> unchanged when it is at most <paramref name="maxLen"/> characters, otherwise a truncated version with an ellipsis suffix.</summary>
     private static string Truncate(string s, int maxLen) =>
         s.Length <= maxLen ? s : s[..maxLen] + "...(truncated)";
 }

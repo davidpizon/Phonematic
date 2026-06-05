@@ -3,8 +3,10 @@ using Phonematic.Converters;
 
 namespace Phonematic.Tests;
 
+/// <summary>Verifies the Avalonia value converters: <see cref="PercentageConverter"/>, <see cref="FileSizeConverter"/>, <see cref="DurationConverter"/>, and <see cref="InverseBoolConverter"/>.</summary>
 public class ConverterTests
 {
+    /// <summary>Verifies that <see cref="PercentageConverter"/> formats a 0.0–1.0 value as a whole-number percentage string.</summary>
     [Theory]
     [InlineData(0.0, "0%")]
     [InlineData(0.5, "50%")]
@@ -16,6 +18,7 @@ public class ConverterTests
         Assert.Equal(expected, result);
     }
 
+    /// <summary>Verifies that <see cref="FileSizeConverter"/> formats a byte count with the correct unit suffix.</summary>
     [Theory]
     [InlineData(500L, "500 B")]
     [InlineData(1536L, "1.5 KB")]
@@ -28,6 +31,7 @@ public class ConverterTests
         Assert.Equal(expected, result);
     }
 
+    /// <summary>Verifies that <see cref="DurationConverter"/> formats seconds into the correct human-readable string.</summary>
     [Theory]
     [InlineData(45.0, "45s")]
     [InlineData(125.0, "2m 5s")]
@@ -38,6 +42,7 @@ public class ConverterTests
         Assert.Equal(expected, result);
     }
 
+    /// <summary>Verifies that <see cref="InverseBoolConverter.Convert"/> inverts a boolean value.</summary>
     [Fact]
     public void InverseBoolConverter_InvertsBool()
     {
@@ -45,6 +50,7 @@ public class ConverterTests
         Assert.Equal(true, InverseBoolConverter.Instance.Convert(false, typeof(bool), null, CultureInfo.InvariantCulture));
     }
 
+    /// <summary>Verifies that <see cref="InverseBoolConverter.ConvertBack"/> also inverts a boolean value.</summary>
     [Fact]
     public void InverseBoolConverter_ConvertBack_InvertsBool()
     {

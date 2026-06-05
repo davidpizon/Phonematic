@@ -56,6 +56,7 @@ public sealed class ActiveVoiceModelService : IActiveVoiceModelService
     // Private helpers
     // ---------------------------------------------------------------------------
 
+    /// <summary>Creates a blank default <see cref="VoiceModel"/> used as the initial active model.</summary>
     private static VoiceModel CreateDefaultModel() =>
         new()
         {

@@ -5,17 +5,23 @@ using Phonematic.Models;
 
 namespace Phonematic.Services;
 
+/// <summary>
+/// Performs cosine-similarity vector search over all <see cref="TranscriptionChunk"/> embeddings
+/// stored in the database. Implements <see cref="IVectorSearchService"/>.
+/// </summary>
 public class VectorSearchService : IVectorSearchService
 {
     private readonly IEmbeddingService _embeddingService;
     private readonly IDbContextFactory<PhonematicDbContext> _dbFactory;
 
+    /// <summary>Initialises a new <see cref="VectorSearchService"/> with the required services.</summary>
     public VectorSearchService(IEmbeddingService embeddingService, IDbContextFactory<PhonematicDbContext> dbFactory)
     {
         _embeddingService = embeddingService;
         _dbFactory = dbFactory;
     }
 
+    /// <inheritdoc/>
     public async Task<List<SearchResult>> SearchAsync(string query, int topK, CancellationToken ct = default)
     {
         var queryEmbedding = _embeddingService.GenerateEmbedding(query);

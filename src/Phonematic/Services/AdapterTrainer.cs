@@ -22,6 +22,7 @@ public sealed class AdapterTrainer : IAdapterTrainer
     private readonly IAcousticPhoneRecognizerService _recognizer;
     private readonly IAcousticFeatureExtractorService _featureExtractor;
 
+    /// <summary>Initialises the trainer with the recognizer and feature extractor needed for hidden-state extraction.</summary>
     public AdapterTrainer(
         IAcousticPhoneRecognizerService recognizer,
         IAcousticFeatureExtractorService featureExtractor)
@@ -143,6 +144,7 @@ public sealed class AdapterTrainer : IAdapterTrainer
     // Training internals (originally factored out of the former GUI training service)
     // ------------------------------------------------------------------
 
+    /// <summary>Runs one forward pass through <paramref name="adapter"/> for a single training item and returns the CTC loss and log-probabilities.</summary>
     private static (Tensor loss, Tensor logProbs) ForwardPass(
         torch.nn.Module<Tensor, Tensor> adapter,
         CTCLoss ctcLoss,
@@ -168,6 +170,7 @@ public sealed class AdapterTrainer : IAdapterTrainer
         return (loss, logProbs);
     }
 
+    /// <summary>Computes the phone error rate (edit-distance / reference length) over the validation set.</summary>
     private static double ComputePer(torch.nn.Module<Tensor, Tensor> adapter, List<(float[,] hs, int[] labels)> items)
     {
         using var noGrad = torch.no_grad();
@@ -200,6 +203,7 @@ public sealed class AdapterTrainer : IAdapterTrainer
         return totalLength > 0 ? totalEdits / totalLength : 0.0;
     }
 
+    /// <summary>Returns the Levenshtein (edit) distance between two integer sequences.</summary>
     private static int LevenshteinDistance(int[] hyp, int[] ref_)
     {
         var m = hyp.Length; var n = ref_.Length;
@@ -214,6 +218,7 @@ public sealed class AdapterTrainer : IAdapterTrainer
         return dp[m, n];
     }
 
+    /// <summary>Partitions <paramref name="data"/> into mini-batches of at most <paramref name="batchSize"/> items.</summary>
     private static IEnumerable<List<(float[,] hs, int[] labels)>> GetBatches(
         List<(float[,] hs, int[] labels)> data, int batchSize)
     {

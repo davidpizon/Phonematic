@@ -2,8 +2,10 @@ using Phonematic.Services;
 
 namespace Phonematic.Tests;
 
+/// <summary>Verifies <see cref="ConfigService"/> directory-path initialisation, default configuration loading, and save/load round-trips.</summary>
 public class ConfigServiceTests
 {
+    /// <summary>Verifies that the constructor populates all well-known directory path properties.</summary>
     [Fact]
     public void Constructor_SetsDirectoryPaths()
     {
@@ -16,6 +18,7 @@ public class ConfigServiceTests
         Assert.Contains("Phonematic", service.AppDataDirectory);
     }
 
+    /// <summary>Verifies that <see cref="ConfigService.Load"/> returns sensible default values on a fresh call.</summary>
     [Fact]
     public void Load_ReturnsDefaultsOnFirstRun()
     {
@@ -30,6 +33,7 @@ public class ConfigServiceTests
         Assert.Equal(5, config.RagTopK);
     }
 
+    /// <summary>Verifies that a saved configuration round-trips correctly through serialisation and deserialisation.</summary>
     [Fact]
     public void Save_And_Load_RoundTrips()
     {
@@ -50,6 +54,7 @@ public class ConfigServiceTests
         service.Save(new Models.AppConfig());
     }
 
+    /// <summary>Verifies that all directory paths are nested under their expected parents (i.e. they share the correct prefixes).</summary>
     [Fact]
     public void DirectoryPaths_AreConsistent()
     {

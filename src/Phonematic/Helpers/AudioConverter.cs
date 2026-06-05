@@ -5,11 +5,18 @@ using NAudio.Wave.SampleProviders;
 
 namespace Phonematic.Helpers;
 
+/// <summary>
+/// Converts audio files to the 16 kHz mono WAV format required by the acoustic pipeline.
+/// Uses ffmpeg on non-Windows platforms and NAudio on Windows. Supported source formats are
+/// listed in <see cref="SupportedExtensions"/>.
+/// </summary>
 public static class AudioConverter
 {
+    /// <summary>File extensions recognised as supported audio input (all lowercase).</summary>
     public static readonly string[] SupportedExtensions =
         { ".mp3", ".wav", ".aiff", ".aif", ".wma", ".m4a", ".ogg", ".flac", ".voc" };
 
+    /// <summary>Returns <see langword="true"/> when <paramref name="filePath"/> has a supported audio extension (case-insensitive).</summary>
     public static bool IsSupported(string filePath)
         => SupportedExtensions.Contains(
             Path.GetExtension(filePath).ToLowerInvariant());
@@ -70,6 +77,7 @@ public static class AudioConverter
         return reader.TotalTime.TotalSeconds;
     }
 
+    /// <summary>Converts <paramref name="inputPath"/> to 16 kHz mono WAV using ffmpeg (non-Windows path).</summary>
     private static async Task ConvertWithFfmpegAsync(string inputPath, string outputPath, CancellationToken ct)
     {
         var psi = new ProcessStartInfo
@@ -94,6 +102,7 @@ public static class AudioConverter
         }
     }
 
+    /// <summary>Uses ffprobe to read the duration of <paramref name="audioPath"/> in seconds (non-Windows path).</summary>
     private static double GetDurationWithFfprobe(string audioPath)
     {
         var psi = new ProcessStartInfo
@@ -116,6 +125,7 @@ public static class AudioConverter
             System.Globalization.CultureInfo.InvariantCulture, out var duration) ? duration : 0;
     }
 
+    /// <summary>Converts <paramref name="audioPath"/> to 16 kHz mono WAV using NAudio (Windows path).</summary>
     private static async Task ConvertWithNAudioAsync(string audioPath, string wavPath, CancellationToken ct)
     {
         await Task.Run(() =>
@@ -137,6 +147,7 @@ public static class AudioConverter
         }, ct);
     }
 
+    /// <summary>Creates an appropriate NAudio <see cref="WaveStream"/> for the given file extension.</summary>
     private static WaveStream CreateReader(string path)
     {
         var ext = Path.GetExtension(path).ToLowerInvariant();

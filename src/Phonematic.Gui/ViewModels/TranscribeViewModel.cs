@@ -7,38 +7,56 @@ using Phonematic.Services;
 
 namespace Phonematic.ViewModels;
 
+/// <summary>
+/// ViewModel for the <c>Transcribe</c> tab.
+/// Accepts a single audio file or a folder of audio files, runs Whisper transcription on each,
+/// tracks processed files, generates embeddings, and updates the UI with per-file and overall
+/// progress. File-picker dialogs are decoupled via <see cref="BrowseFileInteraction"/> and
+/// <see cref="BrowseFolderInteraction"/> delegates assigned by the View's code-behind.
+/// </summary>
 public partial class TranscribeViewModel : ViewModelBase
 {
     private readonly ITranscriptionService _transcriptionService;
     private readonly IFileTrackingService _fileTrackingService;
     private readonly IEmbeddingService _embeddingService;
     private readonly IConfigService _configService;
+
+    /// <summary>Gets or sets the input path (file or folder) selected by the user.</summary>
     [ObservableProperty]
     private string _inputPath = string.Empty;
 
+    /// <summary>Gets or sets the transcription progress for the file currently being processed (0–1).</summary>
     [ObservableProperty]
     private double _currentFileProgress;
 
+    /// <summary>Gets or sets the overall batch progress across all queued files (0–1).</summary>
     [ObservableProperty]
     private double _overallProgress;
 
+    /// <summary>Gets or sets the human-readable status message shown in the UI.</summary>
     [ObservableProperty]
     private string _statusText = "Ready";
 
+    /// <summary>Gets or sets a value indicating whether transcription is currently running.</summary>
     [ObservableProperty]
     private bool _isTranscribing;
 
+    /// <summary>Gets or sets the number of files successfully transcribed in the current run.</summary>
     [ObservableProperty]
     private int _completedCount;
 
+    /// <summary>Gets or sets the number of files skipped (already processed) in the current run.</summary>
     [ObservableProperty]
     private int _skippedCount;
 
+    /// <summary>Gets or sets the number of files that failed in the current run.</summary>
     [ObservableProperty]
     private int _failedCount;
 
+    /// <summary>The collection of audio files queued for transcription.</summary>
     public ObservableCollection<Mp3FileItem> Files { get; } = new();
 
+    /// <summary>Initialises a new <see cref="TranscribeViewModel"/> with the required services.</summary>
     public TranscribeViewModel(
         ITranscriptionService transcriptionService,
         IFileTrackingService fileTrackingService,
@@ -54,10 +72,12 @@ public partial class TranscribeViewModel : ViewModelBase
         var config = _configService.Load();
     }
 
-    // Set by View code-behind to wire platform file dialogs
+    /// <summary>Delegate assigned by the View to open a single-file picker dialog.</summary>
     public Func<Task>? BrowseFileInteraction { get; set; }
+    /// <summary>Delegate assigned by the View to open a folder-picker dialog.</summary>
     public Func<Task>? BrowseFolderInteraction { get; set; }
 
+    /// <summary>Invokes the file-picker interaction to let the user select a single audio file.</summary>
     [RelayCommand]
     private async Task BrowseFileAsync()
     {
@@ -65,6 +85,7 @@ public partial class TranscribeViewModel : ViewModelBase
             await BrowseFileInteraction();
     }
 
+    /// <summary>Invokes the folder-picker interaction to let the user select a folder of audio files.</summary>
     [RelayCommand]
     private async Task BrowseFolderAsync()
     {
@@ -72,6 +93,11 @@ public partial class TranscribeViewModel : ViewModelBase
             await BrowseFolderInteraction();
     }
 
+    /// <summary>
+    /// Populates <see cref="Files"/> from a file or folder path, resets counters, and saves
+    /// the path to config as the last import path.
+    /// </summary>
+    /// <param name="path">Absolute path to an audio file or a directory of audio files.</param>
     public void LoadFiles(string path)
     {
         Files.Clear();
@@ -113,6 +139,7 @@ public partial class TranscribeViewModel : ViewModelBase
         }
     }
 
+    /// <summary>Processes all queued files — transcribes, tracks, and embeds each in turn.</summary>
     [RelayCommand(IncludeCancelCommand = true)]
     private async Task StartTranscriptionAsync(CancellationToken ct)
     {
@@ -197,15 +224,23 @@ public partial class TranscribeViewModel : ViewModelBase
     }
 }
 
+/// <summary>
+/// Represents a single audio file queued for transcription, together with its display metadata
+/// and live status string.
+/// </summary>
 public partial class Mp3FileItem : ObservableObject
 {
+    /// <summary>Gets or sets the absolute path to the audio file.</summary>
     public string FilePath { get; set; } = string.Empty;
 
+    /// <summary>Gets or sets the display file name (without directory).</summary>
     [ObservableProperty]
     private string _fileName = string.Empty;
 
+    /// <summary>Gets or sets the file size in bytes.</summary>
     public long FileSizeBytes { get; set; }
 
+    /// <summary>Gets a human-readable file size string (B / KB / MB).</summary>
     public string FileSizeDisplay => FileSizeBytes switch
     {
         < 1024 => $"{FileSizeBytes} B",
@@ -213,6 +248,7 @@ public partial class Mp3FileItem : ObservableObject
         _ => $"{FileSizeBytes / 1048576.0:F1} MB"
     };
 
+    /// <summary>Gets or sets the processing status label (e.g. "Pending", "Transcribing…", "Done", "Skipped").</summary>
     [ObservableProperty]
     private string _status = "Pending";
 }

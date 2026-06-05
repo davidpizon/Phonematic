@@ -169,6 +169,10 @@ public static class CtcForcedAligner
     // Assemble per-phone spans → words
     // ------------------------------------------------------------------
 
+    /// <summary>
+    /// Converts the per-frame Viterbi state assignments into time-stamped <see cref="WordAlignment"/> objects.
+    /// Labels that were never assigned a frame are silently skipped.
+    /// </summary>
     private static IReadOnlyList<WordAlignment> GroupIntoWords(
         int[] frameState,
         List<int> labels,
@@ -214,6 +218,7 @@ public static class CtcForcedAligner
         return result;
     }
 
+    /// <summary>Computes the mean posterior probability of <paramref name="label"/> over the frame span [<paramref name="startFrame"/>, <paramref name="endFrame"/>).</summary>
     private static float SpanConfidence(double[,] logp, int startFrame, int endFrame, int label)
     {
         if (endFrame <= startFrame) return 0f;
@@ -223,6 +228,7 @@ public static class CtcForcedAligner
         return (float)(sum / (endFrame - startFrame));
     }
 
+    /// <summary>Computes the numerically-stable log-softmax of each row of <paramref name="logits"/>, returning a [frames × vocab] matrix of log-probabilities.</summary>
     private static double[,] ComputeLogSoftmax(float[,] logits, int frames, int vocabSize)
     {
         var logp = new double[frames, vocabSize];

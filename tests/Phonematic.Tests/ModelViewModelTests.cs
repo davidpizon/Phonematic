@@ -15,6 +15,7 @@ public class ModelViewModelTests
     // Construction / initial state
     // -------------------------------------------------------------------------
 
+    /// <summary>Verifies that the constructor populates <c>ModelName</c>, <c>ModelPath</c>, and <c>TrainedDate</c> from the active model.</summary>
     [Fact]
     public void Constructor_PopulatesPropertiesFromActiveModel()
     {
@@ -32,6 +33,7 @@ public class ModelViewModelTests
         Assert.NotEqual("Never", vm.TrainedDate);
     }
 
+    /// <summary>Verifies that <c>TrainedDate</c> reads "Never" when <c>LastTrainedAtUtc</c> is null.</summary>
     [Fact]
     public void Constructor_ShowsNeverTrainedDate_WhenLastTrainedAtUtcIsNull()
     {
@@ -41,6 +43,7 @@ public class ModelViewModelTests
         Assert.Equal("Never", vm.TrainedDate);
     }
 
+    /// <summary>Verifies that <c>ModelPath</c> is an empty string when the active model has no file path.</summary>
     [Fact]
     public void Constructor_ModelPathIsEmpty_WhenNoFilePath()
     {
@@ -54,6 +57,7 @@ public class ModelViewModelTests
     // ActiveModelChanged event → ViewModel refreshes
     // -------------------------------------------------------------------------
 
+    /// <summary>Verifies that <see cref="IActiveVoiceModelService.ActiveModelChanged"/> updates the <c>ModelName</c> property.</summary>
     [Fact]
     public void ActiveModelChanged_UpdatesModelNameProperty()
     {
@@ -65,6 +69,7 @@ public class ModelViewModelTests
         Assert.Equal("new-name", vm.ModelName);
     }
 
+    /// <summary>Verifies that <see cref="IActiveVoiceModelService.ActiveModelChanged"/> updates the <c>ModelPath</c> property.</summary>
     [Fact]
     public void ActiveModelChanged_UpdatesModelPathProperty()
     {
@@ -80,6 +85,7 @@ public class ModelViewModelTests
         Assert.Equal(@"C:\new\path.phonematic", vm.ModelPath);
     }
 
+    /// <summary>Verifies that <see cref="IActiveVoiceModelService.ActiveModelChanged"/> updates the <c>TrainedDate</c> property.</summary>
     [Fact]
     public void ActiveModelChanged_UpdatesTrainedDateProperty()
     {
@@ -99,6 +105,7 @@ public class ModelViewModelTests
     // LoadCommand
     // -------------------------------------------------------------------------
 
+    /// <summary>Verifies that the load command passes the picked path to <see cref="IActiveVoiceModelService.LoadFromFile"/>.</summary>
     [Fact]
     public async Task LoadCommand_CallsLoadFromFile_WithPickedPath()
     {
@@ -113,6 +120,7 @@ public class ModelViewModelTests
         Assert.Equal(@"C:\picked\voice.phonematic", svc.LastLoadedPath);
     }
 
+    /// <summary>Verifies that cancelling the file picker (returning null) does not invoke <see cref="IActiveVoiceModelService.LoadFromFile"/>.</summary>
     [Fact]
     public async Task LoadCommand_DoesNotCallLoadFromFile_WhenUserCancels()
     {
@@ -127,6 +135,7 @@ public class ModelViewModelTests
         Assert.Null(svc.LastLoadedPath);
     }
 
+    /// <summary>Verifies that a successful load sets status text containing the word "loaded".</summary>
     [Fact]
     public async Task LoadCommand_SetsStatusText_OnSuccess()
     {
@@ -141,6 +150,7 @@ public class ModelViewModelTests
         Assert.Contains("loaded", vm.StatusText, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>Verifies that a failed load sets status text containing the word "Failed".</summary>
     [Fact]
     public async Task LoadCommand_SetsStatusText_OnError()
     {
@@ -155,6 +165,7 @@ public class ModelViewModelTests
         Assert.Contains("Failed", vm.StatusText, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>Verifies that the load command is a no-op when the browse interaction has not been assigned.</summary>
     [Fact]
     public async Task LoadCommand_DoesNothing_WhenInteractionNotAssigned()
     {
@@ -171,6 +182,7 @@ public class ModelViewModelTests
     // ExportCommand
     // -------------------------------------------------------------------------
 
+    /// <summary>Verifies that the export command passes the picked path to <see cref="IActiveVoiceModelService.ExportToFile"/>.</summary>
     [Fact]
     public async Task ExportCommand_CallsExportToFile_WithPickedPath()
     {
@@ -185,6 +197,7 @@ public class ModelViewModelTests
         Assert.Equal(@"C:\out\export.phonematic", svc.LastExportedPath);
     }
 
+    /// <summary>Verifies that cancelling the save picker does not invoke <see cref="IActiveVoiceModelService.ExportToFile"/>.</summary>
     [Fact]
     public async Task ExportCommand_DoesNotCallExportToFile_WhenUserCancels()
     {
@@ -199,6 +212,7 @@ public class ModelViewModelTests
         Assert.Null(svc.LastExportedPath);
     }
 
+    /// <summary>Verifies that a successful export sets status text containing the word "exported".</summary>
     [Fact]
     public async Task ExportCommand_SetsStatusText_OnSuccess()
     {
@@ -213,6 +227,7 @@ public class ModelViewModelTests
         Assert.Contains("exported", vm.StatusText, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>Verifies that a failed export sets status text containing the word "Failed".</summary>
     [Fact]
     public async Task ExportCommand_SetsStatusText_OnError()
     {
@@ -227,6 +242,7 @@ public class ModelViewModelTests
         Assert.Contains("Failed", vm.StatusText, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>Verifies that the export command is a no-op when the browse interaction has not been assigned.</summary>
     [Fact]
     public async Task ExportCommand_DoesNothing_WhenInteractionNotAssigned()
     {
@@ -253,6 +269,7 @@ internal sealed class FakeActiveVoiceModelService : IActiveVoiceModelService
     private readonly bool _throwOnLoad;
     private readonly bool _throwOnExport;
 
+    /// <summary>Creates the fake with a given initial model and optional failure switches.</summary>
     public FakeActiveVoiceModelService(
         VoiceModel initial,
         bool throwOnLoad = false,
@@ -273,6 +290,7 @@ internal sealed class FakeActiveVoiceModelService : IActiveVoiceModelService
     /// <summary>Records the last path passed to <see cref="ExportToFile"/>.</summary>
     public string? LastExportedPath { get; private set; }
 
+    /// <inheritdoc/>
     public void LoadFromFile(string phonematicFilePath)
     {
         if (_throwOnLoad)
@@ -282,6 +300,7 @@ internal sealed class FakeActiveVoiceModelService : IActiveVoiceModelService
         ActiveModelChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <inheritdoc/>
     public void ExportToFile(string destinationPath)
     {
         if (_throwOnExport)

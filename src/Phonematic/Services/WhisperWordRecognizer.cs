@@ -63,6 +63,7 @@ public sealed class WhisperWordRecognizer : IWhisperWordRecognizer
         }
     }
 
+    /// <summary>Returns the cached <see cref="WhisperProcessor"/>, creating it on first call (double-checked lock).</summary>
     private WhisperProcessor GetOrCreateProcessor()
     {
         if (_processor is not null) return _processor;

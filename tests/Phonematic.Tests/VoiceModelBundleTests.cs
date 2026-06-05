@@ -12,19 +12,23 @@ public sealed class VoiceModelBundleTests : IDisposable
     private readonly string _path =
         Path.Combine(Path.GetTempPath(), $"phonematic-bundle-{Guid.NewGuid():N}.phonematic");
 
+    /// <summary>Removes the temporary bundle file after each test.</summary>
     public void Dispose()
     {
         try { File.Delete(_path); } catch { /* best-effort */ }
     }
 
+    /// <summary>Speaker baseline embedded in every test bundle.</summary>
     private static readonly SpeakerBaseline Baseline = new()
     {
         F0MeanHz = 123f, F0P10Hz = 90f, F0P90Hz = 180f,
         IntensityMeanDb = -18f, RatePhonesPerSecond = 4.5f, VoiceQuality = "modal",
     };
 
+    /// <summary>Base-model identity embedded in every test bundle.</summary>
     private static readonly BaseModelInfo BaseModel = new("test-base", "https://example/model.onnx", 57, 768);
 
+    /// <summary>Verifies that <see cref="VoiceModelBundle.ReadBaseModelInfo"/> returns the base-model identity that was saved in the bundle.</summary>
     [Fact]
     public void SaveThenReadBaseModelInfo_RoundTripsIdentity()
     {
@@ -37,6 +41,7 @@ public sealed class VoiceModelBundleTests : IDisposable
         Assert.Equal(57, info.VocabSize);
     }
 
+    /// <summary>Verifies that <see cref="VoiceModelBundle.Load"/> restores both the speaker baseline and base-model metadata from the bundle.</summary>
     [Fact]
     public void Load_RestoresBaselineAndBaseModel()
     {
@@ -49,6 +54,7 @@ public sealed class VoiceModelBundleTests : IDisposable
         Assert.Equal("modal", loaded.Baseline.VoiceQuality);
     }
 
+    /// <summary>Verifies that <see cref="VoiceAdapter"/> loads a bundle and produces logits with the correct [frames × vocab] shape.</summary>
     [Fact]
     public void VoiceAdapter_LoadsBundle_AndProducesVocabSizedLogits()
     {

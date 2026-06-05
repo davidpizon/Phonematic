@@ -4,13 +4,19 @@ using Phonematic.ViewModels;
 
 namespace Phonematic.Views;
 
+/// <summary>
+/// Code-behind for <c>TranscribeView.axaml</c>.
+/// Wires the file-picker and folder-picker interactions for <see cref="TranscribeViewModel"/>.
+/// </summary>
 public partial class TranscribeView : UserControl
 {
+    /// <summary>Initialises the view and its compiled XAML.</summary>
     public TranscribeView()
     {
         InitializeComponent();
     }
 
+    /// <inheritdoc/>
     protected override void OnDataContextChanged(EventArgs e)
     {
         base.OnDataContextChanged(e);

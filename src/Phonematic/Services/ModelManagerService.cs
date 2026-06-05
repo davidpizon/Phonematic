@@ -2,6 +2,11 @@ using Whisper.net.Ggml;
 
 namespace Phonematic.Services;
 
+/// <summary>
+/// Downloads and manages the AI model files (Whisper GGML, ONNX embedding, LLM GGUF,
+/// and wav2vec2 phoneme ONNX) required by Phonematic. Uses a shared <see cref="HttpClient"/>
+/// with retry-on-transient-error logic. Implements <see cref="IModelManagerService"/>.
+/// </summary>
 public class ModelManagerService : IModelManagerService
 {
     private readonly IConfigService _config;
@@ -13,6 +18,7 @@ public class ModelManagerService : IModelManagerService
 
     private const int MaxRetryAttempts = 3;
 
+    /// <summary>Initialises the service, wiring it to <paramref name="config"/> and creating a shared <see cref="HttpClient"/>.</summary>
     public ModelManagerService(IConfigService config)
     {
         _config = config;
@@ -158,6 +164,7 @@ public class ModelManagerService : IModelManagerService
         await DownloadFileAsync(LlmModelUrl, GetLlmModelPath(), progress, ct);
     }
 
+    /// <summary>Streams a file from <paramref name="url"/> to <paramref name="outputPath"/> atomically via a <c>.tmp</c> file, reporting scaled progress.</summary>
     private async Task DownloadFileAsync(string url, string outputPath, IProgress<double>? progress, CancellationToken ct, double progressScale = 1.0)
     {
         if (File.Exists(outputPath)) return;
@@ -205,6 +212,7 @@ public class ModelManagerService : IModelManagerService
         }, progress, ct);
     }
 
+    /// <summary>Runs <paramref name="action"/>, retrying up to <see cref="MaxRetryAttempts"/> times on transient errors with exponential back-off.</summary>
     private static async Task WithRetryAsync(Func<Task> action, IProgress<double>? progress, CancellationToken ct)
     {
         for (int attempt = 1; ; attempt++)
@@ -223,6 +231,7 @@ public class ModelManagerService : IModelManagerService
         }
     }
 
+    /// <summary>Returns <see langword="true"/> for HTTP, IO, and timeout exceptions that are safe to retry.</summary>
     private static bool IsTransient(Exception ex)
     {
         if (ex is HttpRequestException) return true;
@@ -231,6 +240,7 @@ public class ModelManagerService : IModelManagerService
         return false;
     }
 
+    /// <summary>Deletes <paramref name="path"/> if it exists; silently swallows any exception.</summary>
     private static void TryDeleteFile(string path)
     {
         try { if (File.Exists(path)) File.Delete(path); } catch { }

@@ -8,6 +8,7 @@ namespace Phonematic.Tests.Cli;
 /// </summary>
 public class CliArgumentParsingTests
 {
+    /// <summary>Verifies that a single positional input argument parses without errors and applies option defaults.</summary>
     [Fact]
     public void Parse_InputOnly_NoErrors_DefaultsApplied()
     {
@@ -23,6 +24,7 @@ public class CliArgumentParsingTests
         Assert.False(options.Quiet);
     }
 
+    /// <summary>Verifies that all short flag aliases bind to the expected options.</summary>
     [Fact]
     public void Parse_AllShortFlags_AreBound()
     {
@@ -38,6 +40,7 @@ public class CliArgumentParsingTests
         Assert.True(options.Quiet);
     }
 
+    /// <summary>Verifies that the <c>--output-dir</c> alias binds to the same output option as <c>--output</c>.</summary>
     [Fact]
     public void Parse_OutputDirAlias_BindsSameOption()
     {
@@ -48,6 +51,7 @@ public class CliArgumentParsingTests
         Assert.Equal("results", builder.Bind(parse).Output);
     }
 
+    /// <summary>Verifies that long-form option names bind correctly.</summary>
     [Fact]
     public void Parse_LongOptionNames_AreBound()
     {
@@ -61,6 +65,7 @@ public class CliArgumentParsingTests
         Assert.Equal("o.phos", options.Output);
     }
 
+    /// <summary>Verifies that omitting the required input argument produces a parse error.</summary>
     [Fact]
     public void Parse_MissingRequiredInput_ProducesError()
     {
@@ -70,6 +75,7 @@ public class CliArgumentParsingTests
         Assert.NotEmpty(parse.Errors);
     }
 
+    /// <summary>Verifies that an unknown option name produces a parse error.</summary>
     [Fact]
     public void Parse_UnknownOption_ProducesError()
     {
@@ -79,6 +85,7 @@ public class CliArgumentParsingTests
         Assert.NotEmpty(parse.Errors);
     }
 
+    /// <summary>Verifies that built-in help and version directives parse without errors even without the required input argument.</summary>
     [Theory]
     [InlineData("--help")]
     [InlineData("-h")]
@@ -96,6 +103,7 @@ public class CliArgumentParsingTests
     // Word-source / adaptation options
     // -------------------------------------------------------------------------
 
+    /// <summary>Verifies that transcript, voice-model, whisper, and whisper-model options bind correctly.</summary>
     [Fact]
     public void Parse_TranscriptVoiceModelWhisper_AreBound()
     {
@@ -112,6 +120,7 @@ public class CliArgumentParsingTests
         Assert.Equal("small", o.WhisperModel);
     }
 
+    /// <summary>Verifies that the <c>-t</c> alias binds to the transcript path option.</summary>
     [Fact]
     public void Parse_TranscriptShortAlias_IsBound()
     {
@@ -122,6 +131,7 @@ public class CliArgumentParsingTests
         Assert.Equal("w.txt", builder.Bind(parse).TranscriptPath);
     }
 
+    /// <summary>Verifies that word-source options default to null/false when not supplied.</summary>
     [Fact]
     public void Parse_ConvertDefaults_NoWordSourceOptions()
     {
@@ -137,6 +147,7 @@ public class CliArgumentParsingTests
     // train subcommand
     // -------------------------------------------------------------------------
 
+    /// <summary>Verifies that the <c>train</c> subcommand binds its positional argument and all options correctly.</summary>
     [Fact]
     public void Parse_TrainSubcommand_BindsArgumentsAndOptions()
     {
@@ -152,6 +163,7 @@ public class CliArgumentParsingTests
         Assert.True(o.Recursive);
     }
 
+    /// <summary>Verifies that the <c>--epochs</c> option defaults to 50 when not supplied.</summary>
     [Fact]
     public void Parse_TrainSubcommand_EpochsDefaultsTo50()
     {
@@ -162,6 +174,7 @@ public class CliArgumentParsingTests
         Assert.Equal(50, builder.BindTrain(parse).Epochs);
     }
 
+    /// <summary>Verifies that omitting the required <c>--output</c> option on the <c>train</c> subcommand produces an error.</summary>
     [Fact]
     public void Parse_TrainSubcommand_MissingRequiredOutput_Errors()
     {

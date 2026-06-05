@@ -3,9 +3,13 @@ using Phonematic.Models;
 namespace Phonematic.Services;
 
 /// <summary>One (audio, transcript) training pair, addressed by file path.</summary>
+/// <param name="AudioPath">Absolute path to the source audio file.</param>
+/// <param name="TranscriptPath">Absolute path to the plain-text transcript matching the audio.</param>
 public sealed record TrainingPairInput(string AudioPath, string TranscriptPath);
 
 /// <summary>Outcome of an adapter training run.</summary>
+/// <param name="ArtifactPath">Path to the saved <c>.phonematic</c> bundle.</param>
+/// <param name="BestPhoneErrorRate">Best Phone Error Rate achieved on the validation set.</param>
 public sealed record AdapterTrainingResult(string ArtifactPath, double BestPhoneErrorRate);
 
 /// <summary>

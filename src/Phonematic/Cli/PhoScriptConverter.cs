@@ -26,6 +26,7 @@ public sealed class PhoScriptConverter : IPhoScriptConverter
     private readonly IVoiceAdapter? _voiceAdapter;
     private readonly IWhisperWordRecognizer? _whisper;
 
+    /// <summary>Creates a converter with the given acoustic services; optional adapter and Whisper recognizer can be omitted.</summary>
     public PhoScriptConverter(
         IAcousticPhoneRecognizerService recognizer,
         IAcousticFeatureExtractorService featureExtractor,

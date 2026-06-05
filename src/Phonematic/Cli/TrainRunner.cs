@@ -21,6 +21,7 @@ public sealed class TrainRunner
     private readonly TextWriter _stderr;
     private readonly bool _quiet;
 
+    /// <summary>Initialises the runner with all dependencies needed to execute a training run.</summary>
     public TrainRunner(
         IModelManagerService models,
         IAdapterTrainer trainer,
@@ -106,8 +107,11 @@ public sealed class TrainRunner
         return pairs;
     }
 
+    /// <summary>Writes an informational message to stderr; suppressed in quiet mode.</summary>
     private void Info(string message) { if (!_quiet) _stderr.WriteLine(message); }
+    /// <summary>Writes a warning-prefixed message to stderr (never suppressed).</summary>
     private void Warn(string message) => _stderr.WriteLine($"warning: {message}");
+    /// <summary>Writes an error-prefixed message to stderr (never suppressed).</summary>
     private void Error(string message) => _stderr.WriteLine($"error: {message}");
 
     /// <summary>Writes a one-line summary to stderr after each training epoch.</summary>

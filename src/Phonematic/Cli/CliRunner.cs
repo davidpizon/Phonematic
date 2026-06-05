@@ -23,6 +23,7 @@ public sealed class CliRunner
     private readonly string _whisperModelSize;
     private readonly string? _baseModelName;
 
+    /// <summary>Initialises the runner with all dependencies needed to execute a conversion.</summary>
     public CliRunner(
         IPhoScriptConverter converter,
         IModelManagerService models,
@@ -217,6 +218,7 @@ public sealed class CliRunner
     // Helpers
     // ------------------------------------------------------------------
 
+    /// <summary>Returns <see langword="true"/> when the configured base wav2vec2 model file is present.</summary>
     private bool BaseModelReady() =>
         _baseModelName is null
             ? _models.IsWav2Vec2ModelDownloaded()
@@ -224,13 +226,16 @@ public sealed class CliRunner
 
     // Transcript ▸ Whisper ▸ free decode: a Whisper model is only needed when --whisper is set
     // and no transcript is available to drive forced alignment.
+    /// <summary>Returns <see langword="true"/> when Whisper inference is needed (i.e. <c>--whisper</c> is set and no transcript is provided).</summary>
     private bool WhisperRequired(CliOptions options, bool transcriptAvailable) =>
         options.UseWhisper && !transcriptAvailable;
 
+    /// <summary>Returns <see langword="true"/> when all models required for the given options are available.</summary>
     private bool ModelReady(CliOptions options, bool transcriptAvailable) =>
         BaseModelReady()
         && (!WhisperRequired(options, transcriptAvailable) || _models.IsWhisperModelDownloaded(_whisperModelSize));
 
+    /// <summary>Writes actionable error messages to stderr describing which models are missing and how to obtain them.</summary>
     private void PrintModelInstructions(CliOptions options, bool transcriptAvailable)
     {
         if (!BaseModelReady())
@@ -258,12 +263,15 @@ public sealed class CliRunner
         return File.Exists(transcript) ? transcript : null;
     }
 
+    /// <summary>Writes an informational message to stderr; suppressed in quiet mode.</summary>
     private void Info(string message)
     {
         if (!_quiet) _stderr.WriteLine(message);
     }
 
+    /// <summary>Writes a warning-prefixed message to stderr (never suppressed).</summary>
     private void Warn(string message) => _stderr.WriteLine($"warning: {message}");
 
+    /// <summary>Writes an error-prefixed message to stderr (never suppressed).</summary>
     private void Error(string message) => _stderr.WriteLine($"error: {message}");
 }

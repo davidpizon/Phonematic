@@ -168,6 +168,7 @@ public sealed class AcousticFeatureExtractorService : IAcousticFeatureExtractorS
     // Private helpers
     // ------------------------------------------------------------------
 
+    /// <summary>Loads all samples from a 16 kHz mono WAV file into a float array; throws if the sample rate is not 16 kHz.</summary>
     private static float[] LoadMonoSamples(string wavPath)
     {
         using var reader = new AudioFileReader(wavPath);
@@ -182,6 +183,7 @@ public sealed class AcousticFeatureExtractorService : IAcousticFeatureExtractorS
         return buffer[..read];
     }
 
+    /// <summary>Estimates the harmonics-to-noise ratio (dB) for one frame via autocorrelation at the fundamental period.</summary>
     private static float ComputeHnr(float[] samples, int start, int end, float f0Hz, int sr)
     {
         if (f0Hz <= 0 || end <= start) return 0f;

@@ -13,6 +13,7 @@ public class TrainViewModelTests
     // Construction / initial state
     // -------------------------------------------------------------------------
 
+    /// <summary>Verifies that <c>StatusText</c> is "Ready" after construction.</summary>
     [Fact]
     public void Constructor_StatusTextIsReady()
     {
@@ -20,6 +21,7 @@ public class TrainViewModelTests
         Assert.Equal("Ready", vm.StatusText);
     }
 
+    /// <summary>Verifies that <c>Files</c> is empty when no last import path exists.</summary>
     [Fact]
     public void Constructor_FilesCollectionIsEmpty_WhenNoLastImportPath()
     {
@@ -27,6 +29,7 @@ public class TrainViewModelTests
         Assert.Empty(vm.Files);
     }
 
+    /// <summary>Verifies that <c>IsTraining</c> is false after construction.</summary>
     [Fact]
     public void Constructor_IsTrainingIsFalse()
     {
@@ -34,6 +37,7 @@ public class TrainViewModelTests
         Assert.False(vm.IsTraining);
     }
 
+    /// <summary>Verifies that all counters are zero after construction.</summary>
     [Fact]
     public void Constructor_CountersAreZero()
     {
@@ -47,6 +51,7 @@ public class TrainViewModelTests
     // LoadInputSets — folder scanning
     // -------------------------------------------------------------------------
 
+    /// <summary>Verifies that a supported audio file in the folder is added to <c>Files</c>.</summary>
     [Fact]
     public void LoadInputSets_PopulatesFiles_WithSupportedAudioFile()
     {
@@ -62,6 +67,7 @@ public class TrainViewModelTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    /// <summary>Verifies that <c>InputPath</c> is set to the scanned folder path.</summary>
     [Fact]
     public void LoadInputSets_SetsInputPath()
     {
@@ -76,6 +82,7 @@ public class TrainViewModelTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    /// <summary>Verifies that newly loaded files have status "Pending".</summary>
     [Fact]
     public void LoadInputSets_SetsFileStatusToPending()
     {
@@ -90,6 +97,7 @@ public class TrainViewModelTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    /// <summary>Verifies that a second call to <c>LoadInputSets</c> replaces the previous file list.</summary>
     [Fact]
     public void LoadInputSets_ClearsExistingFiles_OnSubsequentCall()
     {
@@ -112,6 +120,7 @@ public class TrainViewModelTests
         }
     }
 
+    /// <summary>Verifies that a non-existent path leaves <c>Files</c> empty.</summary>
     [Fact]
     public void LoadInputSets_DoesNothing_WhenPathDoesNotExist()
     {
@@ -120,6 +129,7 @@ public class TrainViewModelTests
         Assert.Empty(vm.Files);
     }
 
+    /// <summary>Verifies that all audio files in the folder are added to <c>Files</c>.</summary>
     [Fact]
     public void LoadInputSets_PopulatesMultipleFiles_FromFolder()
     {
@@ -135,6 +145,7 @@ public class TrainViewModelTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    /// <summary>Verifies that all counters are reset to zero on each call to <c>LoadInputSets</c>.</summary>
     [Fact]
     public void LoadInputSets_ResetsCounters()
     {
@@ -151,6 +162,7 @@ public class TrainViewModelTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    /// <summary>Verifies that an empty directory leaves <c>Files</c> empty.</summary>
     [Fact]
     public void LoadInputSets_LeavesFilesEmpty_WhenDirectoryContainsNoAudioOrPhosFiles()
     {
@@ -164,6 +176,7 @@ public class TrainViewModelTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    /// <summary>Verifies that non-audio and non-phos files are ignored during scanning.</summary>
     [Fact]
     public void LoadInputSets_IgnoresNonAudioAndNonPhosFiles()
     {
@@ -179,6 +192,7 @@ public class TrainViewModelTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    /// <summary>Verifies that <c>AudioPath</c> on a file item points to the discovered audio file.</summary>
     [Fact]
     public void LoadInputSets_SetsAudioPath_ToAudioFilePath()
     {
@@ -197,6 +211,7 @@ public class TrainViewModelTests
     // LoadInputSets — .phos companion detection
     // -------------------------------------------------------------------------
 
+    /// <summary>Verifies that a .phos file matching the audio stem sets <c>TranscriptionPath</c>.</summary>
     [Fact]
     public void LoadInputSets_SetsTranscriptionPath_WhenPhosFileExists()
     {
@@ -212,6 +227,7 @@ public class TrainViewModelTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    /// <summary>Verifies that <c>TranscriptionPath</c> is empty when no matching .phos file exists.</summary>
     [Fact]
     public void LoadInputSets_SetsTranscriptionPathToEmpty_WhenNoPhosFile()
     {
@@ -226,6 +242,7 @@ public class TrainViewModelTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    /// <summary>Verifies that a .phos file without a matching audio file still creates a row.</summary>
     [Fact]
     public void LoadInputSets_CreatesItem_ForPhosFileWithoutAudio()
     {
@@ -240,6 +257,7 @@ public class TrainViewModelTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    /// <summary>Verifies that a phos-only row has an empty <c>AudioPath</c>.</summary>
     [Fact]
     public void LoadInputSets_PhosOnlyItem_HasEmptyAudioPath()
     {
@@ -254,6 +272,7 @@ public class TrainViewModelTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    /// <summary>Verifies that a phos-only row has its <c>TranscriptionPath</c> set to the .phos file.</summary>
     [Fact]
     public void LoadInputSets_PhosOnlyItem_HasTranscriptionPath()
     {
@@ -268,6 +287,7 @@ public class TrainViewModelTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    /// <summary>Verifies that the display name of a phos-only row is the stem of the .phos filename.</summary>
     [Fact]
     public void LoadInputSets_PhosOnlyItem_ShowsPhosFileName()
     {
@@ -282,6 +302,7 @@ public class TrainViewModelTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    /// <summary>Verifies that an audio file and a .phos file with the same stem produce only one row.</summary>
     [Fact]
     public void LoadInputSets_AudioAndPhosSameStem_ProducesSingleRow()
     {
@@ -297,6 +318,7 @@ public class TrainViewModelTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    /// <summary>Verifies that mixed audio-only, paired, and phos-only files produce the correct total row count.</summary>
     [Fact]
     public void LoadInputSets_MixedStems_ProducesCorrectRowCount()
     {
@@ -314,6 +336,7 @@ public class TrainViewModelTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    /// <summary>Verifies that phos-matching only applies to same-stem entries in the same directory.</summary>
     [Fact]
     public void LoadInputSets_MatchesPhosFile_BySameBaseNameInSameDirectory()
     {
@@ -339,6 +362,7 @@ public class TrainViewModelTests
     // TrainFileItem — AudioExtension
     // -------------------------------------------------------------------------
 
+    /// <summary>Verifies that <c>AudioExtension</c> returns the file extension of <c>AudioPath</c>.</summary>
     [Theory]
     [InlineData(@"C:\audio\voice.mp3", ".mp3")]
     [InlineData(@"C:\audio\voice.wav", ".wav")]
@@ -349,6 +373,7 @@ public class TrainViewModelTests
         Assert.Equal(expected, item.AudioExtension);
     }
 
+    /// <summary>Verifies that <c>AudioExtension</c> is empty when <c>AudioPath</c> is empty.</summary>
     [Fact]
     public void TrainFileItem_AudioExtension_IsEmpty_WhenAudioPathIsEmpty()
     {
@@ -356,6 +381,7 @@ public class TrainViewModelTests
         Assert.Equal(string.Empty, item.AudioExtension);
     }
 
+    /// <summary>Verifies that <c>AudioExtension</c> raises <c>PropertyChanged</c> when <c>AudioPath</c> changes.</summary>
     [Fact]
     public void TrainFileItem_AudioExtension_RaisesPropertyChanged_WhenAudioPathChanges()
     {
@@ -375,6 +401,7 @@ public class TrainViewModelTests
     // TrainFileItem — TranscriptionStatus
     // -------------------------------------------------------------------------
 
+    /// <summary>Verifies that <c>TranscriptionStatus</c> is "OK" when a transcription path is set.</summary>
     [Fact]
     public void TrainFileItem_TranscriptionStatus_IsOk_WhenTranscriptionPathIsSet()
     {
@@ -382,6 +409,7 @@ public class TrainViewModelTests
         Assert.Equal("OK", item.TranscriptionStatus);
     }
 
+    /// <summary>Verifies that <c>TranscriptionStatus</c> is empty when no transcription path is set.</summary>
     [Fact]
     public void TrainFileItem_TranscriptionStatus_IsEmpty_WhenTranscriptionPathIsEmpty()
     {
@@ -389,6 +417,7 @@ public class TrainViewModelTests
         Assert.Equal(string.Empty, item.TranscriptionStatus);
     }
 
+    /// <summary>Verifies that <c>TranscriptionStatus</c> raises <c>PropertyChanged</c> when <c>TranscriptionPath</c> changes.</summary>
     [Fact]
     public void TrainFileItem_TranscriptionStatus_RaisesPropertyChanged_WhenTranscriptionPathChanges()
     {
@@ -408,6 +437,7 @@ public class TrainViewModelTests
     // StartTrainingCommand
     // -------------------------------------------------------------------------
 
+    /// <summary>Verifies that <c>IsTraining</c> is true while the training command is executing.</summary>
     [Fact]
     public async Task StartTrainingCommand_SetsIsTrainingDuringExecution()
     {
@@ -431,6 +461,7 @@ public class TrainViewModelTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    /// <summary>Verifies that <c>IsTraining</c> is false once training completes.</summary>
     [Fact]
     public async Task StartTrainingCommand_IsTrainingIsFalse_AfterCompletion()
     {
@@ -446,6 +477,7 @@ public class TrainViewModelTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    /// <summary>Verifies that <c>CompletedCount</c> is incremented after a successful training run.</summary>
     [Fact]
     public async Task StartTrainingCommand_IncrementsCompletedCount()
     {
@@ -461,6 +493,7 @@ public class TrainViewModelTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    /// <summary>Verifies that <c>OverallProgress</c> reaches 1.0 after all files are processed.</summary>
     [Fact]
     public async Task StartTrainingCommand_SetsOverallProgressToOne_AfterCompletion()
     {
@@ -476,6 +509,7 @@ public class TrainViewModelTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    /// <summary>Verifies that file status is set to "Done" after processing completes.</summary>
     [Fact]
     public async Task StartTrainingCommand_SetsFilesStatusToDone_AfterCompletion()
     {
@@ -491,6 +525,7 @@ public class TrainViewModelTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    /// <summary>Verifies that the training command is a no-op when no files are loaded.</summary>
     [Fact]
     public async Task StartTrainingCommand_DoesNothing_WhenFilesIsEmpty()
     {
@@ -504,6 +539,7 @@ public class TrainViewModelTests
     // BrowseFolder interaction delegate
     // -------------------------------------------------------------------------
 
+    /// <summary>Verifies that the browse-folder command invokes the assigned interaction delegate.</summary>
     [Fact]
     public async Task BrowseFolderCommand_InvokesInteraction_WhenAssigned()
     {
@@ -516,6 +552,7 @@ public class TrainViewModelTests
         Assert.True(invoked);
     }
 
+    /// <summary>Verifies that the browse-folder command does not throw when no interaction delegate is assigned.</summary>
     [Fact]
     public async Task BrowseFolderCommand_DoesNotThrow_WhenInteractionIsNull()
     {
@@ -524,6 +561,7 @@ public class TrainViewModelTests
         await vm.BrowseFolderCommand.ExecuteAsync(null);
     }
 
+    /// <summary>Verifies that <c>Files</c> is cleared before the browse dialog opens.</summary>
     [Fact]
     public async Task BrowseFolderCommand_ClearsFilesBeforeInteraction()
     {
@@ -550,6 +588,7 @@ public class TrainViewModelTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    /// <summary>Verifies that <c>InputPath</c> is cleared before the browse dialog opens.</summary>
     [Fact]
     public async Task BrowseFolderCommand_ClearsInputPathBeforeInteraction()
     {
@@ -575,6 +614,7 @@ public class TrainViewModelTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
+    /// <summary>Verifies that <c>Files</c> remains empty when the user cancels the browse dialog.</summary>
     [Fact]
     public async Task BrowseFolderCommand_LeavesFilesEmpty_WhenUserCancels()
     {
@@ -599,6 +639,7 @@ public class TrainViewModelTests
     // Helpers
     // -------------------------------------------------------------------------
 
+    /// <summary>Creates a default <see cref="TrainViewModel"/> for use in tests.</summary>
     private static TrainViewModel BuildViewModel() => new();
 
     /// <summary>Creates a uniquely-named temporary directory and returns its path.</summary>

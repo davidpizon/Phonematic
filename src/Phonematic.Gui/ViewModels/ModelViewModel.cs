@@ -124,8 +124,10 @@ public partial class ModelViewModel : ViewModelBase
     // Private helpers
     // ---------------------------------------------------------------------------
 
+    /// <summary>Handles <see cref="IActiveVoiceModelService.ActiveModelChanged"/> by refreshing all observable properties.</summary>
     private void OnActiveModelChanged(object? sender, EventArgs e) => RefreshFromActiveModel();
 
+    /// <summary>Reads the current <see cref="IActiveVoiceModelService.ActiveModel"/> and updates all bound properties.</summary>
     private void RefreshFromActiveModel()
     {
         var model = _activeVoiceModelService.ActiveModel;
