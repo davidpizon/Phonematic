@@ -36,7 +36,7 @@ dotnet test --filter "FullyQualifiedName=Phonematic.Tests.FileHasherTests.Comput
 | `ArpabetToIpaTests.cs` | `ArpabetToIpa.Convert` — correct IPA for all major ARPAbet symbols, stress-digit stripping, slash-delimiter invariant, and fallback format for unknown symbols. |
 | `ChunkTextTests.cs` | `EmbeddingService.ChunkText` — sentence splitting and overlap logic. |
 | `Cli/AudioFileDiscoveryTests.cs` | `AudioFileDiscovery` — supported-extension filtering; top-level vs recursive discovery. |
-| `Cli/CliArgumentParsingTests.cs` | CLI parsing for the `convert`, `train`, and `models` options (incl. `--transcript`/`--whisper`/`--voice-model`). |
+| `Cli/CliArgumentParsingTests.cs` | CLI parsing for the `convert`, `train`, and `model create` options (incl. `--transcript`/`--whisper`/`--voice-model`). |
 | `Cli/CliRunnerTests.cs` | `CliRunner` — transcript pairing/forwarding, model-readiness gating, and exit-code mapping. |
 | `Cli/OutputPathResolverTests.cs` | `OutputPathResolver` — single-file default vs `-o`; directory default vs `--output-dir`; recursive subfolder mirroring. |
 | `CmuDictTests.cs` | `CmuDict.TryGetPhones` — dictionary hits for common words, case-insensitivity, punctuation stripping, miss path, and `StripPunctuation`. |

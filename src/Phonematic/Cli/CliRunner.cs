@@ -245,14 +245,14 @@ public sealed class CliRunner
                 : _models.GetWav2Vec2ModelPath(_baseModelName);
             Error("Required wav2vec2 phoneme model is not downloaded.");
             Error($"Expected at: {path}");
-            Error("Fetch it with `phonematic models download`, or place the model file at the path above.");
+            Error("Create it with `phonematic model create`, or place the model file at the path above.");
         }
 
         if (WhisperRequired(options, transcriptAvailable) && !_models.IsWhisperModelDownloaded(_whisperModelSize))
         {
             Error($"Whisper model '{_whisperModelSize}' is not downloaded (required by --whisper).");
             Error($"Expected at: {_models.GetWhisperModelPath(_whisperModelSize)}");
-            Error("Fetch it with `phonematic models download --whisper`, or omit --whisper.");
+            Error("Create it with `phonematic model create --whisper`, or omit --whisper.");
         }
     }
 

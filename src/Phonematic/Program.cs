@@ -19,7 +19,7 @@ internal static class Program
         var builder = new CliCommandBuilder();
         builder.SetHandler(RunAsync);
         builder.SetTrainHandler(RunTrainAsync);
-        builder.SetModelsHandlers(RunModelsDownloadAsync, RunModelsStatusAsync);
+        builder.SetModelHandler(RunModelCreateAsync);
 
         var parseResult = builder.RootCommand.Parse(args);
 
@@ -106,21 +106,12 @@ internal static class Program
         return await runner.RunAsync(options, ct);
     }
 
-    /// <summary>Handles the <c>models download</c> subcommand: downloads all configured AI models.</summary>
-    private static async Task<int> RunModelsDownloadAsync(ModelsDownloadOptions options, CancellationToken ct)
+    /// <summary>Handles the <c>model create</c> subcommand: downloads the base model and writes an untrained <c>.phonematic</c> bundle.</summary>
+    private static async Task<int> RunModelCreateAsync(ModelCreateOptions options, CancellationToken ct)
     {
         IConfigService config = new ConfigService();
         IModelManagerService models = new ModelManagerService(config);
-        var runner = new ModelsRunner(models, config, Console.Out, Console.Error);
-        return await runner.DownloadAsync(options, ct);
-    }
-
-    /// <summary>Handles the <c>models status</c> subcommand: prints download status for all configured AI models.</summary>
-    private static async Task<int> RunModelsStatusAsync(CancellationToken ct)
-    {
-        IConfigService config = new ConfigService();
-        IModelManagerService models = new ModelManagerService(config);
-        var runner = new ModelsRunner(models, config, Console.Out, Console.Error);
-        return await runner.StatusAsync(ct);
+        var runner = new ModelRunner(models, config, Console.Out, Console.Error);
+        return await runner.CreateAsync(options, ct);
     }
 }

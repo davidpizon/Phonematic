@@ -95,7 +95,7 @@ public sealed class AcousticPhoneRecognizerService : IAcousticPhoneRecognizerSer
             var modelPath = _modelPath ?? _modelManager.GetWav2Vec2ModelPath();
             if (!File.Exists(modelPath))
                 throw new FileNotFoundException(
-                    "wav2vec2 phoneme ONNX model not found. Download it with `phonematic models download`.", modelPath);
+                    "wav2vec2 phoneme ONNX model not found. Create it with `phonematic model create`.", modelPath);
 
             var options = new SessionOptions { InterOpNumThreads = 1, IntraOpNumThreads = 4 };
             _session = new InferenceSession(modelPath, options);

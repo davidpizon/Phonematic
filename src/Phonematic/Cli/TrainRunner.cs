@@ -57,7 +57,7 @@ public sealed class TrainRunner
         {
             Error($"Base model '{_baseModel.Name}' is not downloaded.");
             Error($"Expected at: {_models.GetWav2Vec2ModelPath(_baseModel.Name)}");
-            Error($"Fetch it with: phonematic models download --name {_baseModel.Name}");
+            Error("Create the base model with `phonematic model create`, or place the model file at the path above.");
             return ExitCodes.EnvironmentError;
         }
 

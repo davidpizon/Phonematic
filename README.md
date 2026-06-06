@@ -184,19 +184,18 @@ Phonematic train ./speaker-A --output models/speaker-A.phonematic --recursive
 Phonematic train ./speaker-B -o models/speaker-B.phonematic --epochs 80 --base-model wav2vec2-phoneme
 ```
 
-### Manage models (`models`)
+### Create a model (`model create`)
 
-The only commands that download. Conversion/training otherwise exit `3` if a model is missing.
+The only command that downloads. Conversion/training otherwise exit `3` if a model is missing.
+It downloads the base model and writes a new, untrained `.phonematic` bundle (a scaffold to be
+trained later) to `--output` (required).
 
 ```bash
-# Download the default base model
-Phonematic models download
+# Download the default base model and write the bundle
+Phonematic model create --output models/spk.phonematic
 
-# Download a base model AND a Whisper model for hybrid mode
-Phonematic models download --whisper --whisper-model small
-
-# See which models are present on disk
-Phonematic models status
+# Also download a Whisper model for hybrid mode
+Phonematic model create --output models/spk.phonematic --whisper --whisper-model small
 ```
 
 ## Architecture

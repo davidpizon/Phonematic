@@ -1,12 +1,13 @@
+using Phonematic.Models;
 using Phonematic.Services;
 
 namespace Phonematic.Cli;
 
-/// <summary>Options for <c>models download</c>.</summary>
-public sealed record ModelsDownloadOptions
+/// <summary>Options for <c>model create</c>.</summary>
+public sealed record ModelCreateOptions
 {
-    /// <summary>Base-model name to store/fetch under (default: app config).</summary>
-    public string? Name { get; init; }
+    /// <summary>Output <c>.phonematic</c> bundle path (required).</summary>
+    public required string Output { get; init; }
 
     /// <summary>Source URL for the base model (default: app config).</summary>
     public string? Url { get; init; }
@@ -22,11 +23,12 @@ public sealed record ModelsDownloadOptions
 }
 
 /// <summary>
-/// Orchestrates the <c>models</c> subcommand: explicit model download and a presence report. This is
+/// Orchestrates the <c>model create</c> subcommand: downloads the base model (and optionally Whisper),
+/// then writes a new, untrained <c>.phonematic</c> bundle that records the base-model identity. This is
 /// the only place the CLI downloads models — conversion/training still error if a model is missing.
-/// <para>Result paths go to <c>stdout</c>; progress/logs to <c>stderr</c>.</para>
+/// <para>The created bundle path goes to <c>stdout</c>; progress/logs to <c>stderr</c>.</para>
 /// </summary>
-public sealed class ModelsRunner
+public sealed class ModelRunner
 {
     private readonly IModelManagerService _models;
     private readonly IConfigService _config;
@@ -34,7 +36,7 @@ public sealed class ModelsRunner
     private readonly TextWriter _stderr;
 
     /// <summary>Initialises the runner with the model manager, config service, and output writers.</summary>
-    public ModelsRunner(IModelManagerService models, IConfigService config, TextWriter stdout, TextWriter stderr)
+    public ModelRunner(IModelManagerService models, IConfigService config, TextWriter stdout, TextWriter stderr)
     {
         _models = models;
         _config = config;
@@ -42,16 +44,16 @@ public sealed class ModelsRunner
         _stderr = stderr;
     }
 
-    /// <summary>Downloads the base model (and optionally Whisper); prints each model path to stdout.</summary>
-    public async Task<int> DownloadAsync(ModelsDownloadOptions options, CancellationToken ct)
+    /// <summary>Downloads the base model (and optionally Whisper), writes an untrained bundle, and prints its path to stdout.</summary>
+    public async Task<int> CreateAsync(ModelCreateOptions options, CancellationToken ct)
     {
         var cfg = _config.Load();
-        var name = string.IsNullOrWhiteSpace(options.Name) ? cfg.Wav2Vec2ModelName : options.Name!;
+        var name = cfg.Wav2Vec2ModelName;
         var url = string.IsNullOrWhiteSpace(options.Url) ? cfg.Wav2Vec2ModelUrl : options.Url!;
+        var output = options.Output;
 
         try
         {
-            var basePath = _models.GetWav2Vec2ModelPath(name);
             if (_models.IsWav2Vec2ModelDownloaded(name))
             {
                 Info(options.Quiet, $"Base model '{name}' already present.");
@@ -61,7 +63,6 @@ public sealed class ModelsRunner
                 Info(options.Quiet, $"Downloading base model '{name}' from {url} …");
                 await _models.DownloadWav2Vec2ModelAsync(url, name, Reporter(options.Quiet, "base"), ct);
             }
-            _stdout.WriteLine(basePath);
 
             if (options.Whisper)
             {
@@ -75,9 +76,14 @@ public sealed class ModelsRunner
                     Info(options.Quiet, $"Downloading Whisper model '{size}' …");
                     await _models.DownloadWhisperModelAsync(size, Reporter(options.Quiet, "whisper"), ct);
                 }
-                _stdout.WriteLine(_models.GetWhisperModelPath(size));
             }
 
+            Info(options.Quiet, $"Writing untrained voice-model bundle to {output} …");
+            using var adapter = AdapterModel.Build();
+            var baseModel = new BaseModelInfo(name, url, AdapterModel.PhoneVocabSize, AdapterModel.HiddenDim);
+            VoiceModelBundle.Save(output, adapter, new SpeakerBaseline(), baseModel);
+
+            _stdout.WriteLine(Path.GetFullPath(output));
             return ExitCodes.Success;
         }
         catch (OperationCanceledException)
@@ -87,23 +93,9 @@ public sealed class ModelsRunner
         }
         catch (Exception ex)
         {
-            _stderr.WriteLine($"error: Download failed: {ex.Message}");
+            _stderr.WriteLine($"error: Create failed: {ex.Message}");
             return ExitCodes.RuntimeFailure;
         }
-    }
-
-    /// <summary>Prints a presence report for the base and Whisper models to stdout.</summary>
-    public Task<int> StatusAsync(CancellationToken ct)
-    {
-        var cfg = _config.Load();
-
-        var baseName = cfg.Wav2Vec2ModelName;
-        _stdout.WriteLine(
-            $"base    {baseName,-18} {(_models.IsWav2Vec2ModelDownloaded(baseName) ? "present" : "missing")}  {_models.GetWav2Vec2ModelPath(baseName)}");
-        _stdout.WriteLine(
-            $"whisper {cfg.WhisperModelSize,-18} {(_models.IsWhisperModelDownloaded(cfg.WhisperModelSize) ? "present" : "missing")}  {_models.GetWhisperModelPath(cfg.WhisperModelSize)}");
-
-        return Task.FromResult(ExitCodes.Success);
     }
 
     /// <summary>Writes an informational message to stderr; suppressed when <paramref name="quiet"/> is <see langword="true"/>.</summary>

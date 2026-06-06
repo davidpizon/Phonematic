@@ -91,7 +91,7 @@ failed.
 
 `convert` and `train` verify the base wav2vec2 model before running and exit with code `3` if it
 is missing — they **never download as a side effect**. Fetch models explicitly with
-`phonematic models download` (below), or place the file at the printed path:
+`phonematic model create` (below), or place the file at the printed path:
 
 ```
 %LOCALAPPDATA%\Phonematic\models\acoustic\<base-model-name>.onnx   (default name: wav2vec2-phoneme)
@@ -104,24 +104,23 @@ code `3`):
 %LOCALAPPDATA%\Phonematic\models\whisper\ggml-<size>.bin
 ```
 
-## Managing models (`models`)
+## Creating a model (`model create`)
 
 ```
-Phonematic models download [--name <name>] [--url <url>] [--whisper] [--whisper-model <size>] [--quiet]
-Phonematic models status
+Phonematic model create --output <file> [--url <url>] [--whisper] [--whisper-model <size>] [--quiet]
 ```
 
-`models download` is the **only** command that downloads. It fetches the base wav2vec2 model to
-`acoustic/<name>.onnx` (name + URL default to the app config — both configurable so you can fetch
-and reference **different base models for different speakers**). `--whisper` also downloads the
-Whisper model. `models status` reports which models are present. Downloaded paths print to stdout;
-progress prints to stderr.
+`model create` is the **only** command that downloads. It fetches the base wav2vec2 model (from the
+app-config URL, or `--url`) into `acoustic/<config-name>.onnx`, optionally downloads the Whisper
+model with `--whisper`, and then writes a new, **untrained** `.phonematic` bundle to `--output`
+(required) that records the base-model identity. The bundle is a portable scaffold: it can be
+referenced with `--voice-model`, but it is not yet speaker-adapted — run `train` (below) to produce
+a *trained* bundle. The created bundle path prints to stdout; download progress prints to stderr.
 
 ```bash
-Phonematic models download                      # default base model
-Phonematic models download --name spk-fr --url https://…/fr-phone.onnx   # a different base
-Phonematic models download --whisper --whisper-model small
-Phonematic models status
+Phonematic model create --output models/spk.phonematic                      # default base model
+Phonematic model create --output models/fr.phonematic --url https://…/fr-phone.onnx   # a different base model URL
+Phonematic model create --output models/spk.phonematic --whisper --whisper-model small   # also fetch a Whisper model
 ```
 
 ## Training a voice model (`train`)
@@ -135,7 +134,7 @@ Phonematic train <pairs-dir> --output <model.phonematic> [--epochs N] [--base-mo
 
 Training pairs are discovered as audio files under `<pairs-dir>` that each have a sibling
 `<name>.txt` transcript (the same convention as directory-mode forced alignment). The base model
-must already be downloaded (`models download`); `--base-model <name>` selects which one (default:
+must already be downloaded (`model create`); `--base-model <name>` selects which one (default:
 app config). The trained model path is written to stdout; per-epoch progress (loss, validation
 phone-error-rate) goes to stderr.
 
@@ -146,7 +145,7 @@ bundle's recorded base model is loaded automatically.
 
 ```bash
 # 1. Fetch the base model once
-Phonematic models download
+Phonematic model create
 
 # 2. Train from a folder of recordings, each with a matching .txt
 Phonematic train ./speaker-A --output ./models/speaker-A.phonematic --recursive

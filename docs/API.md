@@ -408,7 +408,7 @@ the end-user command reference.
 |---|---|---|
 | `IPhoScriptConverter` / `PhoScriptConverter` | `Phonematic.Cli` | `Task ConvertFileAsync(input, output, IProgress<double>?, CancellationToken, transcriptPath?, useWhisper)` — the unified per-file pipeline (transcript ▸ Whisper ▸ free decode, optional adapter). |
 | `CliRunner` | `Phonematic.Cli` | Orchestrates a `convert` invocation: validates input, checks models, resolves output paths, drives the per-file loop. Returns an `ExitCodes` value. |
-| `ModelsRunner` | `Phonematic.Cli` | Orchestrates `models download` / `models status` — the only place the CLI downloads models. |
+| `ModelRunner` | `Phonematic.Cli` | Orchestrates `model create` — the only place the CLI downloads models; writes an untrained `.phonematic` bundle. |
 | `TrainRunner` | `Phonematic.Cli` | Orchestrates `train`: pair discovery, readiness checks, per-epoch progress. |
 | `ExitCodes` | `Phonematic.Cli` | `Success = 0`, `RuntimeFailure = 1`, `UsageError = 2`, `EnvironmentError = 3`. |
 

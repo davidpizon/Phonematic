@@ -46,23 +46,21 @@ internal sealed class CliCommandBuilder
     /// <summary>Option that suppresses per-epoch progress output during training.</summary>
     public Option<bool> TrainQuietOption { get; }
 
-    // `models` subcommand
-    /// <summary>The <c>models</c> subcommand.</summary>
-    public Command ModelsCommand { get; }
-    /// <summary>The <c>models download</c> subcommand.</summary>
-    public Command ModelsDownloadCommand { get; }
-    /// <summary>The <c>models status</c> subcommand.</summary>
-    public Command ModelsStatusCommand { get; }
-    /// <summary>Option for the base-model name to download/store.</summary>
-    public Option<string?> DlNameOption { get; }
+    // `model` subcommand
+    /// <summary>The <c>model</c> subcommand.</summary>
+    public Command ModelCommand { get; }
+    /// <summary>The <c>model create</c> subcommand.</summary>
+    public Command ModelCreateCommand { get; }
+    /// <summary>Option for the output <c>.phonematic</c> bundle path (required).</summary>
+    public Option<string> CreateOutputOption { get; }
     /// <summary>Option for the source URL of the base model.</summary>
-    public Option<string?> DlUrlOption { get; }
+    public Option<string?> CreateUrlOption { get; }
     /// <summary>Option that also downloads the Whisper model.</summary>
-    public Option<bool> DlWhisperOption { get; }
+    public Option<bool> CreateWhisperOption { get; }
     /// <summary>Option for the Whisper model size to download.</summary>
-    public Option<string?> DlWhisperModelOption { get; }
+    public Option<string?> CreateWhisperModelOption { get; }
     /// <summary>Option that suppresses download progress output.</summary>
-    public Option<bool> DlQuietOption { get; }
+    public Option<bool> CreateQuietOption { get; }
 
     /// <summary>Builds all arguments, options, subcommands, and wires them into <see cref="RootCommand"/>.</summary>
     public CliCommandBuilder()
@@ -170,40 +168,39 @@ internal sealed class CliCommandBuilder
         };
         RootCommand.Subcommands.Add(TrainCommand);
 
-        // ---- models subcommand: phonematic models download | status ----
-        DlNameOption = new Option<string?>("--name")
+        // ---- model subcommand: phonematic model create ----
+        CreateOutputOption = new Option<string>("--output", "-o")
         {
-            Description = "Base-model name to store/fetch under (default: app config).",
+            Description = "Output .phonematic file path.",
+            Required = true,
         };
-        DlUrlOption = new Option<string?>("--url")
+        CreateUrlOption = new Option<string?>("--url")
         {
             Description = "Source URL for the base model (default: app config).",
         };
-        DlWhisperOption = new Option<bool>("--whisper")
+        CreateWhisperOption = new Option<bool>("--whisper")
         {
             Description = "Also download the Whisper model used by hybrid mode.",
         };
-        DlWhisperModelOption = new Option<string?>("--whisper-model")
+        CreateWhisperModelOption = new Option<string?>("--whisper-model")
         {
             Description = "Whisper model size for --whisper (default: app config).",
         };
-        DlQuietOption = new Option<bool>("--quiet", "-q")
+        CreateQuietOption = new Option<bool>("--quiet", "-q")
         {
             Description = "Suppress download progress output.",
         };
 
-        ModelsDownloadCommand = new Command(
-            "download", "Download the base model (and optionally the Whisper model).")
+        ModelCreateCommand = new Command(
+            "create", "Create a .phonematic bundle (downloads the base model, and optionally Whisper).")
         {
-            DlNameOption, DlUrlOption, DlWhisperOption, DlWhisperModelOption, DlQuietOption,
+            CreateOutputOption, CreateUrlOption, CreateWhisperOption, CreateWhisperModelOption, CreateQuietOption,
         };
-        ModelsStatusCommand = new Command("status", "Show which models are present on disk.");
-        ModelsCommand = new Command("models", "Download and inspect models.")
+        ModelCommand = new Command("model", "Create voice-model bundles.")
         {
-            ModelsDownloadCommand,
-            ModelsStatusCommand,
+            ModelCreateCommand,
         };
-        RootCommand.Subcommands.Add(ModelsCommand);
+        RootCommand.Subcommands.Add(ModelCommand);
 
         // Default no-op action so the root parses without requiring a subcommand (the convert path).
         // Program overrides this via SetHandler; tests parse without setting a handler.
@@ -243,22 +240,17 @@ internal sealed class CliCommandBuilder
     public void SetTrainHandler(Func<TrainOptions, CancellationToken, Task<int>> run)
         => TrainCommand.SetAction((parseResult, ct) => run(BindTrain(parseResult), ct));
 
-    /// <summary>Projects a successful <see cref="ParseResult"/> into <see cref="ModelsDownloadOptions"/>.</summary>
-    public ModelsDownloadOptions BindModelsDownload(ParseResult parseResult) => new()
+    /// <summary>Projects a successful <see cref="ParseResult"/> into <see cref="ModelCreateOptions"/>.</summary>
+    public ModelCreateOptions BindModelCreate(ParseResult parseResult) => new()
     {
-        Name = parseResult.GetValue(DlNameOption),
-        Url = parseResult.GetValue(DlUrlOption),
-        Whisper = parseResult.GetValue(DlWhisperOption),
-        WhisperModel = parseResult.GetValue(DlWhisperModelOption),
-        Quiet = parseResult.GetValue(DlQuietOption),
+        Output = parseResult.GetValue(CreateOutputOption)!,
+        Url = parseResult.GetValue(CreateUrlOption),
+        Whisper = parseResult.GetValue(CreateWhisperOption),
+        WhisperModel = parseResult.GetValue(CreateWhisperModelOption),
+        Quiet = parseResult.GetValue(CreateQuietOption),
     };
 
-    /// <summary>Wires the <c>models download</c> and <c>models status</c> subcommand actions.</summary>
-    public void SetModelsHandlers(
-        Func<ModelsDownloadOptions, CancellationToken, Task<int>> download,
-        Func<CancellationToken, Task<int>> status)
-    {
-        ModelsDownloadCommand.SetAction((parseResult, ct) => download(BindModelsDownload(parseResult), ct));
-        ModelsStatusCommand.SetAction((_, ct) => status(ct));
-    }
+    /// <summary>Wires the <c>model create</c> subcommand action.</summary>
+    public void SetModelHandler(Func<ModelCreateOptions, CancellationToken, Task<int>> create)
+        => ModelCreateCommand.SetAction((parseResult, ct) => create(BindModelCreate(parseResult), ct));
 }

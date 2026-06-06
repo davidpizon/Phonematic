@@ -28,10 +28,12 @@ All notable changes to Phonematic are documented here.
 
 #### Model management, portable speaker-model bundles, all transcription logic in the CLI
 
-- **`models` subcommand (explicit downloads).** `phonematic models download [--name] [--url]
-  [--whisper] [--whisper-model]` is now the single place the CLI downloads models; `models status`
-  reports presence. `convert`/`train` still exit `3` if a model is missing (never download as a
-  side effect).
+- **`model create` subcommand (explicit downloads + bundle creation).**
+  `phonematic model create --output <file> [--url] [--whisper] [--whisper-model]` is the single place
+  the CLI downloads models: it fetches the base model (and optionally Whisper) and writes a new,
+  untrained `.phonematic` bundle to the required `--output` path that records the base-model
+  identity. `convert`/`train` still exit `3` if a model is missing (never download as a side
+  effect).
 - **Configurable, named base models.** `AppConfig.Wav2Vec2ModelName`/`Wav2Vec2ModelUrl`;
   `ModelManagerService` and `AcousticPhoneRecognizerService` accept a named/explicit base model
   (`acoustic/<name>.onnx`), so different speakers can be trained/decoded against different bases.
