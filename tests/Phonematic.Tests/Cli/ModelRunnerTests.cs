@@ -1,13 +1,12 @@
 using Phonematic.Cli;
-using Phonematic.Models;
 using Phonematic.Services;
 
 namespace Phonematic.Tests.Cli;
 
 /// <summary>
-/// Exercises <see cref="ModelRunner.CreateAsync"/> with a fake model manager that reports the base
-/// model already present (so no real download happens), verifying that a valid, loadable
-/// <c>.phonematic</c> bundle is written at <c>--output</c> recording the configured base-model name.
+/// Exercises <see cref="ModelRunner.CreateAsync"/> with a fake <see cref="IModelDownloader"/> that
+/// writes placeholder bytes (no network), verifying that a self-contained, untrained
+/// <c>.phonematic</c> bundle is written at <c>--output</c> with the base ONNX embedded.
 /// </summary>
 public sealed class ModelRunnerTests : IDisposable
 {
@@ -20,97 +19,70 @@ public sealed class ModelRunnerTests : IDisposable
         try { File.Delete(_output); } catch { /* best-effort */ }
     }
 
-    /// <summary>Verifies that <c>model create</c> writes a loadable bundle whose base-model identity matches app config.</summary>
+    /// <summary>Verifies that <c>model create</c> writes a loadable, untrained bundle that embeds the base ONNX.</summary>
     [Fact]
-    public async Task CreateAsync_BaseModelPresent_WritesLoadableBundle()
+    public async Task CreateAsync_WritesSelfContainedUntrainedBundle()
     {
-        var config = new FakeConfigService();
-        var models = new FakeModelManager(present: true);
+        var downloader = new FakeModelDownloader();
         var stdout = new StringWriter();
-        var runner = new ModelRunner(models, config, stdout, TextWriter.Null);
+        var runner = new ModelRunner(downloader, stdout, TextWriter.Null);
 
         var exit = await runner.CreateAsync(
             new ModelCreateOptions { Output = _output, Quiet = true }, CancellationToken.None);
 
         Assert.Equal(ExitCodes.Success, exit);
-        Assert.False(models.DownloadCalled); // base model already present → no download
+        Assert.True(downloader.BaseDownloaded);
+        Assert.False(downloader.WhisperDownloaded); // no --whisper
         Assert.True(File.Exists(_output));
         Assert.Equal(Path.GetFullPath(_output), stdout.ToString().Trim());
 
-        var info = VoiceModelBundle.ReadBaseModelInfo(_output);
-        Assert.Equal(config.Load().Wav2Vec2ModelName, info.Name);
-        Assert.Equal(AdapterModel.PhoneVocabSize, info.VocabSize);
-
-        using var loaded = VoiceModelBundle.Load(_output);
-        Assert.Equal(config.Load().Wav2Vec2ModelName, loaded.BaseModel.Name);
+        using var models = VoiceModelBundle.ExtractModels(_output);
+        Assert.True(File.Exists(models.BaseModelPath));
+        Assert.Null(models.WhisperModelPath);
+        Assert.False(models.IsTrained);
+        Assert.Equal(CliDefaultsBaseName, models.BaseModel.Name);
     }
 
-    /// <summary>Verifies that a missing base model triggers a download before the bundle is written.</summary>
+    /// <summary>Verifies that <c>--whisper</c> embeds a Whisper model and records its size.</summary>
     [Fact]
-    public async Task CreateAsync_BaseModelMissing_DownloadsThenWritesBundle()
+    public async Task CreateAsync_WithWhisper_EmbedsWhisperModel()
     {
-        var config = new FakeConfigService();
-        var models = new FakeModelManager(present: false);
-        var runner = new ModelRunner(models, config, TextWriter.Null, TextWriter.Null);
+        var downloader = new FakeModelDownloader();
+        var runner = new ModelRunner(downloader, TextWriter.Null, TextWriter.Null);
 
         var exit = await runner.CreateAsync(
-            new ModelCreateOptions { Output = _output, Quiet = true }, CancellationToken.None);
+            new ModelCreateOptions { Output = _output, Whisper = true, WhisperModel = "small", Quiet = true },
+            CancellationToken.None);
 
         Assert.Equal(ExitCodes.Success, exit);
-        Assert.True(models.DownloadCalled);
-        Assert.True(File.Exists(_output));
+        Assert.True(downloader.WhisperDownloaded);
+
+        using var models = VoiceModelBundle.ExtractModels(_output);
+        Assert.NotNull(models.WhisperModelPath);
+        Assert.Equal("small", models.WhisperModelSize);
     }
 
-    /// <summary>Config service returning defaults; only <see cref="Load"/> is exercised by the runner.</summary>
-    private sealed class FakeConfigService : IConfigService
+    // The default base-model name baked into the CLI (mirrors CliDefaults.BaseModelName, which is internal).
+    private const string CliDefaultsBaseName = "wav2vec2-phoneme";
+
+    /// <summary>Downloader that writes a few placeholder bytes to the destination instead of fetching.</summary>
+    private sealed class FakeModelDownloader : IModelDownloader
     {
-        private readonly AppConfig _config = new();
-        public AppConfig Load() => _config;
+        public bool BaseDownloaded { get; private set; }
+        public bool WhisperDownloaded { get; private set; }
 
-        public string AppDataDirectory => throw new NotSupportedException();
-        public string ConfigDirectory => throw new NotSupportedException();
-        public string ModelsDirectory => throw new NotSupportedException();
-        public string WhisperModelsDirectory => throw new NotSupportedException();
-        public string OnnxModelsDirectory => throw new NotSupportedException();
-        public string LlmModelsDirectory => throw new NotSupportedException();
-        public string AcousticModelsDirectory => throw new NotSupportedException();
-        public string VoiceModelsDirectory => throw new NotSupportedException();
-        public string DatabasePath => throw new NotSupportedException();
-        public void Save(AppConfig config) => throw new NotSupportedException();
-    }
-
-    /// <summary>Model manager whose presence checks are fixed and whose download is a no-op flag.</summary>
-    private sealed class FakeModelManager(bool present) : IModelManagerService
-    {
-        public bool DownloadCalled { get; private set; }
-
-        public bool IsWav2Vec2ModelDownloaded(string name) => present;
-
-        public Task DownloadWav2Vec2ModelAsync(string url, string name, IProgress<double>? progress = null, CancellationToken ct = default)
+        public Task DownloadToAsync(string url, string destPath, IProgress<double>? progress = null, CancellationToken ct = default)
         {
-            DownloadCalled = true;
+            BaseDownloaded = true;
+            File.WriteAllBytes(destPath, [1, 2, 3, 4]);
             return Task.CompletedTask;
         }
 
-        public bool IsWhisperModelDownloaded(string modelSize) => present;
-        public Task DownloadWhisperModelAsync(string modelSize, IProgress<double>? progress = null, CancellationToken ct = default)
+        public Task DownloadWhisperToAsync(string modelSize, string destPath, IProgress<double>? progress = null, CancellationToken ct = default)
         {
-            DownloadCalled = true;
+            WhisperDownloaded = true;
+            File.WriteAllBytes(destPath, [5, 6, 7, 8]);
             return Task.CompletedTask;
         }
-
-        public bool IsOnnxModelDownloaded() => throw new NotSupportedException();
-        public bool IsLlmModelDownloaded() => throw new NotSupportedException();
-        public bool AreAllModelsReady(string whisperModelSize) => throw new NotSupportedException();
-        public string GetWhisperModelPath(string modelSize) => throw new NotSupportedException();
-        public string GetOnnxModelPath() => throw new NotSupportedException();
-        public string GetOnnxVocabPath() => throw new NotSupportedException();
-        public string GetLlmModelPath() => throw new NotSupportedException();
-        public Task DownloadOnnxModelAsync(IProgress<double>? progress = null, CancellationToken ct = default) => throw new NotSupportedException();
-        public Task DownloadLlmModelAsync(IProgress<double>? progress = null, CancellationToken ct = default) => throw new NotSupportedException();
-        public bool IsWav2Vec2ModelDownloaded() => throw new NotSupportedException();
-        public string GetWav2Vec2ModelPath() => throw new NotSupportedException();
-        public string GetWav2Vec2ModelPath(string name) => throw new NotSupportedException();
-        public Task DownloadWav2Vec2ModelAsync(IProgress<double>? progress = null, CancellationToken ct = default) => throw new NotSupportedException();
     }
 }

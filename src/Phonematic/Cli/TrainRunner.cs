@@ -14,25 +14,31 @@ namespace Phonematic.Cli;
 /// </summary>
 public sealed class TrainRunner
 {
-    private readonly IModelManagerService _models;
     private readonly IAdapterTrainer _trainer;
     private readonly BaseModelInfo _baseModel;
+    private readonly string _baseModelOnnxPath;
+    private readonly string? _whisperModelPath;
+    private readonly string? _whisperModelSize;
     private readonly TextWriter _stdout;
     private readonly TextWriter _stderr;
     private readonly bool _quiet;
 
     /// <summary>Initialises the runner with all dependencies needed to execute a training run.</summary>
     public TrainRunner(
-        IModelManagerService models,
         IAdapterTrainer trainer,
         BaseModelInfo baseModel,
+        string baseModelOnnxPath,
+        string? whisperModelPath,
+        string? whisperModelSize,
         TextWriter stdout,
         TextWriter stderr,
         bool quiet)
     {
-        _models = models;
         _trainer = trainer;
         _baseModel = baseModel;
+        _baseModelOnnxPath = baseModelOnnxPath;
+        _whisperModelPath = whisperModelPath;
+        _whisperModelSize = whisperModelSize;
         _stdout = stdout;
         _stderr = stderr;
         _quiet = quiet;
@@ -53,14 +59,6 @@ public sealed class TrainRunner
             return ExitCodes.UsageError;
         }
 
-        if (!_models.IsWav2Vec2ModelDownloaded(_baseModel.Name))
-        {
-            Error($"Base model '{_baseModel.Name}' is not downloaded.");
-            Error($"Expected at: {_models.GetWav2Vec2ModelPath(_baseModel.Name)}");
-            Error("Create the base model with `phonematic model create`, or place the model file at the path above.");
-            return ExitCodes.EnvironmentError;
-        }
-
         var pairs = DiscoverPairs(options.PairsDir, options.Recursive);
         if (pairs.Count == 0)
         {
@@ -74,7 +72,10 @@ public sealed class TrainRunner
 
         try
         {
-            var result = await _trainer.TrainAsync(pairs, options.Output, _baseModel, options.Epochs, progress, ct);
+            var result = await _trainer.TrainAsync(
+                pairs, options.Output, _baseModel,
+                _baseModelOnnxPath, _whisperModelPath, _whisperModelSize,
+                options.Epochs, progress, ct);
             _stdout.WriteLine(result.ArtifactPath);
             Info($"Wrote {result.ArtifactPath} (best phone error rate: {result.BestPhoneErrorRate:P1}).");
             return ExitCodes.Success;

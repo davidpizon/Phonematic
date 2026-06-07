@@ -37,7 +37,8 @@ dotnet test --filter "FullyQualifiedName=Phonematic.Tests.FileHasherTests.Comput
 | `ChunkTextTests.cs` | `EmbeddingService.ChunkText` — sentence splitting and overlap logic. |
 | `Cli/AudioFileDiscoveryTests.cs` | `AudioFileDiscovery` — supported-extension filtering; top-level vs recursive discovery. |
 | `Cli/CliArgumentParsingTests.cs` | CLI parsing for the `convert`, `train`, and `model create` options (incl. `--transcript`/`--whisper`/`--voice-model`). |
-| `Cli/CliRunnerTests.cs` | `CliRunner` — transcript pairing/forwarding, model-readiness gating, and exit-code mapping. |
+| `Cli/CliRunnerTests.cs` | `CliRunner` — transcript pairing/forwarding, skip/overwrite, and exit-code mapping. |
+| `Cli/ModelRunnerTests.cs` | `ModelRunner.CreateAsync` with a fake `IModelDownloader` — writes a self-contained untrained bundle that embeds the base ONNX (and optional Whisper). |
 | `Cli/OutputPathResolverTests.cs` | `OutputPathResolver` — single-file default vs `-o`; directory default vs `--output-dir`; recursive subfolder mirroring. |
 | `CmuDictTests.cs` | `CmuDict.TryGetPhones` — dictionary hits for common words, case-insensitivity, punctuation stripping, miss path, and `StripPunctuation`. |
 | `ConfigServiceTests.cs` | `ConfigService` directory path computation and settings round-trip. |
@@ -51,7 +52,7 @@ dotnet test --filter "FullyQualifiedName=Phonematic.Tests.FileHasherTests.Comput
 | `PhoScriptWriterTests.cs` | `PhoScriptWriter.Write`, `GetIpaPhones`, `SplitWords`, and `Escape` — document structure, LF line endings, `<phon>` children present, IPA slash delimiters, timestamp fields, and phrase-boundary attributes. |
 | `PhoneTargetBuilderTests.cs` | `PhoneTargetBuilder` — transcript → CTC label-target mapping (ARPAbet → TIMIT indices). |
 | `TrainViewModelTests.cs` | `TrainViewModel` — training tab behaviour and `(audio, transcript)` pair discovery. |
-| `VoiceModelBundleTests.cs` | `VoiceModelBundle` round-trip through TorchSharp save/load + zip/manifest, and `VoiceAdapter.ComputeLogits`. |
+| `VoiceModelBundleTests.cs` | `VoiceModelBundle` round-trip through TorchSharp save/load + zip/manifest, embedded base-ONNX/Whisper extraction (`ExtractModels`), and `VoiceAdapter.ComputeLogits`. |
 | `WordAwarePhoScriptWriterTests.cs` | Word-aware `PhoScriptWriter.Write` overload — populated `<word orth>`, multiple `<sentence>` blocks, and XML well-formedness. |
 
 ## Patterns and Conventions

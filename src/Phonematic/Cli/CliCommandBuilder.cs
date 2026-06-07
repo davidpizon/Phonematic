@@ -21,12 +21,10 @@ internal sealed class CliCommandBuilder
     public Option<bool> QuietOption { get; }
     /// <summary>Option for supplying a transcript file path (single-file mode).</summary>
     public Option<string?> TranscriptOption { get; }
-    /// <summary>Option for supplying a <c>.phonematic</c> voice model path.</summary>
-    public Option<string?> VoiceModelOption { get; }
+    /// <summary>Option for supplying the required <c>.phonematic</c> bundle path (the model source).</summary>
+    public Option<string> VoiceModelOption { get; }
     /// <summary>Option that enables Whisper hybrid transcription for files without a transcript.</summary>
     public Option<bool> WhisperOption { get; }
-    /// <summary>Option for selecting the Whisper model size used by <see cref="WhisperOption"/>.</summary>
-    public Option<string?> WhisperModelOption { get; }
     /// <summary>The root command that accepts the convert options and dispatches to subcommands.</summary>
     public RootCommand RootCommand { get; }
 
@@ -39,8 +37,8 @@ internal sealed class CliCommandBuilder
     public Option<string> TrainOutputOption { get; }
     /// <summary>Option for the number of training epochs.</summary>
     public Option<int> EpochsOption { get; }
-    /// <summary>Option for the base-model name used during training.</summary>
-    public Option<string?> TrainBaseModelOption { get; }
+    /// <summary>Option for the base <c>.phonematic</c> bundle path used during training (required).</summary>
+    public Option<string> TrainBaseModelOption { get; }
     /// <summary>Option that enables subdirectory recursion when discovering training pairs.</summary>
     public Option<bool> TrainRecursiveOption { get; }
     /// <summary>Option that suppresses per-epoch progress output during training.</summary>
@@ -99,19 +97,15 @@ internal sealed class CliCommandBuilder
                           "forced-aligned to those words. Directory mode uses sibling <name>.txt files instead.",
         };
 
-        VoiceModelOption = new Option<string?>("--voice-model")
+        VoiceModelOption = new Option<string>("--voice-model")
         {
-            Description = "Path to a trained .phonematic voice model whose speaker adaptation is applied during recognition.",
+            Description = "Path to the .phonematic bundle (required). Supplies the embedded base model; if trained, its speaker adaptation is applied.",
+            Required = true,
         };
 
         WhisperOption = new Option<bool>("--whisper")
         {
-            Description = "For files without a transcript, use Whisper to supply the words (hybrid mode).",
-        };
-
-        WhisperModelOption = new Option<string?>("--whisper-model")
-        {
-            Description = "Whisper model size for --whisper (e.g. tiny, base, small, medium). Defaults to the app config.",
+            Description = "For files without a transcript, use the bundle's embedded Whisper model to supply the words (hybrid mode).",
         };
 
         RootCommand = new RootCommand(
@@ -125,7 +119,6 @@ internal sealed class CliCommandBuilder
             TranscriptOption,
             VoiceModelOption,
             WhisperOption,
-            WhisperModelOption,
         };
 
         // ---- train subcommand: phonematic train <pairs-dir> -o model.phonematic ----
@@ -143,9 +136,10 @@ internal sealed class CliCommandBuilder
             Description = "Number of training epochs (default 50).",
             DefaultValueFactory = _ => 50,
         };
-        TrainBaseModelOption = new Option<string?>("--base-model")
+        TrainBaseModelOption = new Option<string>("--base-model")
         {
-            Description = "Base-model name to train against (default: app config). Recorded in the output bundle.",
+            Description = "Path to the base .phonematic bundle to train against (create one with `model create`).",
+            Required = true,
         };
         TrainRecursiveOption = new Option<bool>("--recursive", "-r")
         {
@@ -218,7 +212,6 @@ internal sealed class CliCommandBuilder
         TranscriptPath = parseResult.GetValue(TranscriptOption),
         VoiceModelPath = parseResult.GetValue(VoiceModelOption),
         UseWhisper = parseResult.GetValue(WhisperOption),
-        WhisperModel = parseResult.GetValue(WhisperModelOption),
     };
 
     /// <summary>Wires the command's action to <paramref name="run"/>, binding options first.</summary>
@@ -231,7 +224,7 @@ internal sealed class CliCommandBuilder
         PairsDir = parseResult.GetValue(PairsDirArgument)!,
         Output = parseResult.GetValue(TrainOutputOption)!,
         Epochs = parseResult.GetValue(EpochsOption),
-        BaseModel = parseResult.GetValue(TrainBaseModelOption),
+        BaseModel = parseResult.GetValue(TrainBaseModelOption)!,
         Recursive = parseResult.GetValue(TrainRecursiveOption),
         Quiet = parseResult.GetValue(TrainQuietOption),
     };

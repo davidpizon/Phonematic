@@ -25,14 +25,17 @@ The solution (`src/Phonematic.slnx`) contains two product projects plus tests:
 
 The shared, model-agnostic acoustic code lives in the **`Phonematic`** console project:
 `AudioConverter`, `CtcDecoder`, `TimitToIpa`, the acoustic `PhoScriptWriter.Write` overload,
-`AcousticPhoneRecognizerService`, `AcousticFeatureExtractorService`, plus `ConfigService` and
-`ModelManagerService` (for locating/checking models). The Whisper-legacy IPA path —
+`AcousticPhoneRecognizerService`, `AcousticFeatureExtractorService`. `ConfigService` and
+`ModelManagerService` also live here but are used **only by the GUI** (for its `settings.json` and
+its Whisper/ONNX-embedding/LLM model cache); the CLI uses neither. The Whisper-legacy IPA path —
 `CmuDict`, `GraphemeToPhoneme`, `ArpabetToIpa`, and `PhoScriptWriterLegacy.WriteLegacy` — also
 lives in `Phonematic` (moved there alongside `TranscriptionService`), so both products share one
 implementation; the acoustic pipeline itself does not use it.
 
-The **CLI** is a stateless file→file converter: it does **not** write to SQLite or compute
-embeddings. Per file it runs `AudioConverter.ConvertToWavAsync` →
+The **CLI** is a stateless, self-contained file→file converter: it reads **no config file** and
+uses **no model cache** — every model comes from the `.phonematic` bundle passed via `--voice-model`
+(created by `model create`, which embeds the base ONNX and optional Whisper). It does **not** write
+to SQLite or compute embeddings. Per file it runs `AudioConverter.ConvertToWavAsync` →
 `AcousticPhoneRecognizerService.RecognizeAsync` → `AcousticFeatureExtractorService` (frames +
 baseline) → `PhoScriptWriter.Write`. Argument parsing uses `System.CommandLine`; the progress
 bar uses `Spectre.Console` (rendered to stderr, with result paths on stdout). See
@@ -239,7 +242,9 @@ TrainingPairs
 
 ## File System Layout
 
-All runtime data is stored under `%LOCALAPPDATA%\Phonematic\`:
+This layout is **GUI runtime data**. The **CLI uses none of it** — it reads no config file and no
+model cache; CLI models live inside the `.phonematic` bundle the user passes (see [CLI.md](CLI.md)).
+The GUI stores its data under `%LOCALAPPDATA%\Phonematic\`:
 
 ```
 %LOCALAPPDATA%\Phonematic\

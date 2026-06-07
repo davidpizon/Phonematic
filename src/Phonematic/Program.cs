@@ -35,83 +35,105 @@ internal static class Program
         return await parseResult.InvokeAsync();
     }
 
-    /// <summary>Handles the default (convert) subcommand: builds the acoustic pipeline and delegates to <see cref="CliRunner"/>.</summary>
+    /// <summary>Handles the default (convert) subcommand: builds the acoustic pipeline from the bundle and delegates to <see cref="CliRunner"/>.</summary>
     private static async Task<int> RunAsync(CliOptions options, CancellationToken ct)
     {
-        IConfigService config = new ConfigService();
-        IModelManagerService models = new ModelManagerService(config);
-        var cfg = config.Load();
-
-        if (!string.IsNullOrWhiteSpace(options.VoiceModelPath) && !File.Exists(options.VoiceModelPath))
+        // The .phonematic bundle is the sole model source (no config / no cache). --voice-model is
+        // required by the parser; verify the file exists before extraction.
+        if (string.IsNullOrWhiteSpace(options.VoiceModelPath) || !File.Exists(options.VoiceModelPath))
         {
             await Console.Error.WriteLineAsync($"error: Voice model not found: {options.VoiceModelPath}");
             return ExitCodes.UsageError;
         }
 
-        var whisperModelSize = string.IsNullOrWhiteSpace(options.WhisperModel)
-            ? cfg.WhisperModelSize
-            : options.WhisperModel;
+        BundleModels bundle;
+        try
+        {
+            bundle = VoiceModelBundle.ExtractModels(options.VoiceModelPath!);
+        }
+        catch (Exception ex) when (ex is InvalidDataException or FileNotFoundException)
+        {
+            await Console.Error.WriteLineAsync($"error: {ex.Message}");
+            return ExitCodes.EnvironmentError;
+        }
 
-        // Optional speaker adapter; its bundle records which base model to run on.
-        using var voiceAdapter = string.IsNullOrWhiteSpace(options.VoiceModelPath)
-            ? null
-            : new VoiceAdapter(options.VoiceModelPath!);
-        var baseName = voiceAdapter?.BaseModel.Name ?? cfg.Wav2Vec2ModelName;
-
-        using IAcousticPhoneRecognizerService recognizer =
-            new AcousticPhoneRecognizerService(models, models.GetWav2Vec2ModelPath(baseName));
-        IAcousticFeatureExtractorService featureExtractor = new AcousticFeatureExtractorService();
-
-        using IWhisperWordRecognizer? whisper = options.UseWhisper
-            ? new WhisperWordRecognizer(models, config, whisperModelSize)
-            : null;
-
-        IPhoScriptConverter converter = new PhoScriptConverter(
-            recognizer, featureExtractor, voiceAdapter, whisper);
-
-        IProgressDisplay progress = options.Quiet
-            ? new NullProgressDisplay()
-            : new SpectreProgressDisplay(AnsiConsole.Create(new AnsiConsoleSettings
+        using (bundle)
+        {
+            if (options.UseWhisper && bundle.WhisperModelPath is null)
             {
-                // Render the progress bar to stderr so stdout carries only result lines.
-                Out = new AnsiConsoleOutput(Console.Error),
-            }));
+                await Console.Error.WriteLineAsync(
+                    "error: --whisper was requested but the bundle has no embedded Whisper model. " +
+                    "Re-create it with `phonematic model create --whisper`.");
+                return ExitCodes.EnvironmentError;
+            }
 
-        var runner = new CliRunner(
-            converter, models, progress, Console.Out, Console.Error, options.Quiet, whisperModelSize, baseName);
+            using IAcousticPhoneRecognizerService recognizer =
+                new AcousticPhoneRecognizerService(bundle.BaseModelPath);
+            IAcousticFeatureExtractorService featureExtractor = new AcousticFeatureExtractorService();
 
-        return await runner.RunAsync(options, ct);
+            using IWhisperWordRecognizer? whisper = options.UseWhisper
+                ? new WhisperWordRecognizer(bundle.WhisperModelPath!, CliDefaults.WhisperThreadCount)
+                : null;
+
+            // Apply the speaker adapter only when the bundle is trained; an untrained scaffold
+            // (from `model create`) free-decodes with the base model alone.
+            using var voiceAdapter = bundle.IsTrained ? new VoiceAdapter(options.VoiceModelPath!) : null;
+
+            IPhoScriptConverter converter = new PhoScriptConverter(
+                recognizer, featureExtractor, voiceAdapter, whisper);
+
+            IProgressDisplay progress = options.Quiet
+                ? new NullProgressDisplay()
+                : new SpectreProgressDisplay(AnsiConsole.Create(new AnsiConsoleSettings
+                {
+                    // Render the progress bar to stderr so stdout carries only result lines.
+                    Out = new AnsiConsoleOutput(Console.Error),
+                }));
+
+            var runner = new CliRunner(converter, progress, Console.Out, Console.Error, options.Quiet);
+            return await runner.RunAsync(options, ct);
+        }
     }
 
-    /// <summary>Handles the <c>train</c> subcommand: builds the training pipeline and delegates to <see cref="TrainRunner"/>.</summary>
+    /// <summary>Handles the <c>train</c> subcommand: builds the training pipeline from the base bundle and delegates to <see cref="TrainRunner"/>.</summary>
     private static async Task<int> RunTrainAsync(TrainOptions options, CancellationToken ct)
     {
-        IConfigService config = new ConfigService();
-        IModelManagerService models = new ModelManagerService(config);
-        var cfg = config.Load();
+        if (string.IsNullOrWhiteSpace(options.BaseModel) || !File.Exists(options.BaseModel))
+        {
+            await Console.Error.WriteLineAsync($"error: Base model bundle not found: {options.BaseModel}");
+            return ExitCodes.UsageError;
+        }
 
-        var baseName = string.IsNullOrWhiteSpace(options.BaseModel) ? cfg.Wav2Vec2ModelName : options.BaseModel!;
-        // The configured URL is only known to match the default base model; for a named --base-model
-        // we have no per-model URL registry, so record it as unknown rather than a possibly-wrong URL.
-        var baseUrl = string.Equals(baseName, cfg.Wav2Vec2ModelName, StringComparison.Ordinal) ? cfg.Wav2Vec2ModelUrl : "";
-        var baseModel = new BaseModelInfo(
-            baseName, baseUrl, AdapterModel.PhoneVocabSize, AdapterModel.HiddenDim);
+        BundleModels bundle;
+        try
+        {
+            bundle = VoiceModelBundle.ExtractModels(options.BaseModel!);
+        }
+        catch (Exception ex) when (ex is InvalidDataException or FileNotFoundException)
+        {
+            await Console.Error.WriteLineAsync($"error: {ex.Message}");
+            return ExitCodes.EnvironmentError;
+        }
 
-        using IAcousticPhoneRecognizerService recognizer =
-            new AcousticPhoneRecognizerService(models, models.GetWav2Vec2ModelPath(baseName));
-        IAcousticFeatureExtractorService featureExtractor = new AcousticFeatureExtractorService();
-        IAdapterTrainer trainer = new AdapterTrainer(recognizer, featureExtractor);
+        using (bundle)
+        {
+            using IAcousticPhoneRecognizerService recognizer =
+                new AcousticPhoneRecognizerService(bundle.BaseModelPath);
+            IAcousticFeatureExtractorService featureExtractor = new AcousticFeatureExtractorService();
+            IAdapterTrainer trainer = new AdapterTrainer(recognizer, featureExtractor);
 
-        var runner = new TrainRunner(models, trainer, baseModel, Console.Out, Console.Error, options.Quiet);
-        return await runner.RunAsync(options, ct);
+            var runner = new TrainRunner(
+                trainer, bundle.BaseModel, bundle.BaseModelPath, bundle.WhisperModelPath, bundle.WhisperModelSize,
+                Console.Out, Console.Error, options.Quiet);
+            return await runner.RunAsync(options, ct);
+        }
     }
 
-    /// <summary>Handles the <c>model create</c> subcommand: downloads the base model and writes an untrained <c>.phonematic</c> bundle.</summary>
+    /// <summary>Handles the <c>model create</c> subcommand: downloads the base model (and optional Whisper) and writes a self-contained untrained <c>.phonematic</c> bundle.</summary>
     private static async Task<int> RunModelCreateAsync(ModelCreateOptions options, CancellationToken ct)
     {
-        IConfigService config = new ConfigService();
-        IModelManagerService models = new ModelManagerService(config);
-        var runner = new ModelRunner(models, config, Console.Out, Console.Error);
+        using var downloader = new ModelDownloader();
+        var runner = new ModelRunner(downloader, Console.Out, Console.Error);
         return await runner.CreateAsync(options, ct);
     }
 }

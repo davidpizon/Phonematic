@@ -20,8 +20,7 @@ namespace Phonematic.Services;
 /// </summary>
 public sealed class AcousticPhoneRecognizerService : IAcousticPhoneRecognizerService
 {
-    private readonly IModelManagerService _modelManager;
-    private readonly string? _modelPath;
+    private readonly string _modelPath;
     private InferenceSession? _session;
     private readonly object _lock = new();
 
@@ -47,12 +46,13 @@ public sealed class AcousticPhoneRecognizerService : IAcousticPhoneRecognizerSer
     };
 
     /// <summary>
-    /// Initialises the service. The ONNX session is not loaded until the first
-    /// call to <see cref="RecognizeAsync"/>.
+    /// Initialises the service with the path to the wav2vec2 phoneme ONNX model (e.g. extracted from
+    /// a <c>.phonematic</c> bundle). The ONNX session is not loaded until the first call to
+    /// <see cref="RecognizeAsync"/>.
     /// </summary>
-    public AcousticPhoneRecognizerService(IModelManagerService modelManager, string? modelPath = null)
+    public AcousticPhoneRecognizerService(string modelPath)
     {
-        _modelManager = modelManager;
+        ArgumentException.ThrowIfNullOrWhiteSpace(modelPath);
         _modelPath = modelPath;
     }
 
@@ -92,13 +92,12 @@ public sealed class AcousticPhoneRecognizerService : IAcousticPhoneRecognizerSer
         lock (_lock)
         {
             if (_session is not null) return;
-            var modelPath = _modelPath ?? _modelManager.GetWav2Vec2ModelPath();
-            if (!File.Exists(modelPath))
+            if (!File.Exists(_modelPath))
                 throw new FileNotFoundException(
-                    "wav2vec2 phoneme ONNX model not found. Create it with `phonematic model create`.", modelPath);
+                    "wav2vec2 phoneme ONNX model not found. Create a bundle with `phonematic model create`.", _modelPath);
 
             var options = new SessionOptions { InterOpNumThreads = 1, IntraOpNumThreads = 4 };
-            _session = new InferenceSession(modelPath, options);
+            _session = new InferenceSession(_modelPath, options);
         }
     }
 

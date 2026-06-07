@@ -34,17 +34,14 @@ public sealed record CliOptions
     public string? TranscriptPath { get; init; }
 
     /// <summary>
-    /// Optional path to a trained <c>.phonematic</c> voice model. When set, its speaker-adaptation
-    /// head is applied during recognition to improve accuracy for that speaker.
+    /// Path to the <c>.phonematic</c> bundle (required). It supplies the embedded base wav2vec2 model;
+    /// if the bundle is trained, its speaker-adaptation head is also applied during recognition.
     /// </summary>
     public string? VoiceModelPath { get; init; }
 
     /// <summary>
-    /// When <see langword="true"/>, files without a transcript are transcribed by Whisper (the word
-    /// source) and phone-aligned with wav2vec2 (Whisper-hybrid mode).
+    /// When <see langword="true"/>, files without a transcript are transcribed by the bundle's embedded
+    /// Whisper model (the word source) and phone-aligned with wav2vec2 (Whisper-hybrid mode).
     /// </summary>
     public bool UseWhisper { get; init; }
-
-    /// <summary>Optional Whisper model size for <see cref="UseWhisper"/> (e.g. <c>"base"</c>, <c>"small"</c>); defaults to the app config.</summary>
-    public string? WhisperModel { get; init; }
 }

@@ -28,7 +28,7 @@ public sealed class CliRunnerTests : IDisposable
     [Fact]
     public async Task NonexistentPath_ReturnsUsageError()
     {
-        var (runner, _, err) = MakeRunner(new FakeConverter(), new FakeModelManager());
+        var (runner, _, err) = MakeRunner(new FakeConverter());
         var code = await runner.RunAsync(Options(@"C:\definitely\not\here.mp3"), CancellationToken.None);
 
         Assert.Equal(ExitCodes.UsageError, code);
@@ -43,26 +43,10 @@ public sealed class CliRunnerTests : IDisposable
         var txt = Path.Combine(dir, "notes.txt");
         File.WriteAllText(txt, "x");
 
-        var (runner, _, _) = MakeRunner(new FakeConverter(), new FakeModelManager());
+        var (runner, _, _) = MakeRunner(new FakeConverter());
         var code = await runner.RunAsync(Options(txt), CancellationToken.None);
 
         Assert.Equal(ExitCodes.UsageError, code);
-    }
-
-    /// <summary>Verifies that a missing wav2vec2 model returns <see cref="ExitCodes.EnvironmentError"/> without invoking the converter.</summary>
-    [Fact]
-    public async Task MissingModel_ReturnsEnvironmentError()
-    {
-        var dir = NewTempDir();
-        var audio = CreateAudio(dir, "a.mp3");
-        var converter = new FakeConverter();
-
-        var (runner, _, err) = MakeRunner(converter, new FakeModelManager { Wav2Vec2Ready = false });
-        var code = await runner.RunAsync(Options(audio), CancellationToken.None);
-
-        Assert.Equal(ExitCodes.EnvironmentError, code);
-        Assert.Empty(converter.Calls);
-        Assert.Contains("model is not downloaded", err.ToString());
     }
 
     // -------------------------------------------------------------------------
@@ -78,7 +62,7 @@ public sealed class CliRunnerTests : IDisposable
         var expectedOutput = Path.ChangeExtension(audio, ".phos");
         var converter = new FakeConverter();
 
-        var (runner, outw, _) = MakeRunner(converter, new FakeModelManager());
+        var (runner, outw, _) = MakeRunner(converter);
         var code = await runner.RunAsync(Options(audio), CancellationToken.None);
 
         Assert.Equal(ExitCodes.Success, code);
@@ -95,7 +79,7 @@ public sealed class CliRunnerTests : IDisposable
         var outPath = Path.Combine(dir, "custom.phos");
         var converter = new FakeConverter();
 
-        var (runner, outw, _) = MakeRunner(converter, new FakeModelManager());
+        var (runner, outw, _) = MakeRunner(converter);
         var code = await runner.RunAsync(Options(audio, output: outPath), CancellationToken.None);
 
         Assert.Equal(ExitCodes.Success, code);
@@ -110,7 +94,7 @@ public sealed class CliRunnerTests : IDisposable
         var dir = NewTempDir();
         var audio = CreateAudio(dir, "voice.mp3");
 
-        var (runner, outw, err) = MakeRunner(new FakeConverter { ShouldThrow = true }, new FakeModelManager());
+        var (runner, outw, err) = MakeRunner(new FakeConverter { ShouldThrow = true });
         var code = await runner.RunAsync(Options(audio), CancellationToken.None);
 
         Assert.Equal(ExitCodes.RuntimeFailure, code);
@@ -128,7 +112,7 @@ public sealed class CliRunnerTests : IDisposable
         File.WriteAllText(output, "existing");
         var converter = new FakeConverter();
 
-        var (runner, outw, err) = MakeRunner(converter, new FakeModelManager());
+        var (runner, outw, err) = MakeRunner(converter);
         var code = await runner.RunAsync(Options(audio), CancellationToken.None);
 
         Assert.Equal(ExitCodes.Success, code);
@@ -147,7 +131,7 @@ public sealed class CliRunnerTests : IDisposable
         File.WriteAllText(output, "existing");
         var converter = new FakeConverter();
 
-        var (runner, _, _) = MakeRunner(converter, new FakeModelManager());
+        var (runner, _, _) = MakeRunner(converter);
         var code = await runner.RunAsync(Options(audio, overwrite: true), CancellationToken.None);
 
         Assert.Equal(ExitCodes.Success, code);
@@ -167,7 +151,7 @@ public sealed class CliRunnerTests : IDisposable
         CreateAudio(dir, "b.wav");
         var converter = new FakeConverter();
 
-        var (runner, outw, _) = MakeRunner(converter, new FakeModelManager());
+        var (runner, outw, _) = MakeRunner(converter);
         var code = await runner.RunAsync(Options(dir), CancellationToken.None);
 
         Assert.Equal(ExitCodes.Success, code);
@@ -185,7 +169,7 @@ public sealed class CliRunnerTests : IDisposable
         CreateAudio(dir, "b.wav");
         var converter = new FakeConverter { ShouldThrow = true };
 
-        var (runner, _, err) = MakeRunner(converter, new FakeModelManager());
+        var (runner, _, err) = MakeRunner(converter);
         var code = await runner.RunAsync(Options(dir), CancellationToken.None);
 
         Assert.Equal(ExitCodes.RuntimeFailure, code);
@@ -203,7 +187,7 @@ public sealed class CliRunnerTests : IDisposable
         File.WriteAllText(Path.ChangeExtension(a, ".phos"), "existing"); // a is skipped
         var converter = new FakeConverter();
 
-        var (runner, _, err) = MakeRunner(converter, new FakeModelManager());
+        var (runner, _, err) = MakeRunner(converter);
         var code = await runner.RunAsync(Options(dir), CancellationToken.None);
 
         Assert.Equal(ExitCodes.Success, code);
@@ -219,7 +203,7 @@ public sealed class CliRunnerTests : IDisposable
         File.WriteAllText(Path.Combine(dir, "readme.txt"), "x");
         var converter = new FakeConverter();
 
-        var (runner, outw, _) = MakeRunner(converter, new FakeModelManager());
+        var (runner, outw, _) = MakeRunner(converter);
         var code = await runner.RunAsync(Options(dir), CancellationToken.None);
 
         Assert.Equal(ExitCodes.Success, code);
@@ -237,7 +221,7 @@ public sealed class CliRunnerTests : IDisposable
         CreateAudio(dir, "b.wav"); // no sibling transcript
         var converter = new FakeConverter();
 
-        var (runner, _, _) = MakeRunner(converter, new FakeModelManager());
+        var (runner, _, _) = MakeRunner(converter);
         var code = await runner.RunAsync(Options(dir), CancellationToken.None);
 
         Assert.Equal(ExitCodes.Success, code);
@@ -258,7 +242,7 @@ public sealed class CliRunnerTests : IDisposable
         File.WriteAllText(transcript, "hello");
         var converter = new FakeConverter();
 
-        var (runner, _, _) = MakeRunner(converter, new FakeModelManager());
+        var (runner, _, _) = MakeRunner(converter);
         var options = new CliOptions { Input = audio, TranscriptPath = transcript };
         var code = await runner.RunAsync(options, CancellationToken.None);
 
@@ -277,7 +261,7 @@ public sealed class CliRunnerTests : IDisposable
         var outDir = NewTempDir();
         var converter = new FakeConverter();
 
-        var (runner, _, _) = MakeRunner(converter, new FakeModelManager());
+        var (runner, _, _) = MakeRunner(converter);
         var code = await runner.RunAsync(
             Options(input, output: outDir, recursive: true), CancellationToken.None);
 
@@ -297,11 +281,11 @@ public sealed class CliRunnerTests : IDisposable
 
     /// <summary>Creates a <see cref="CliRunner"/> wired to in-memory stdout/stderr writers and returns all three.</summary>
     private static (CliRunner runner, StringWriter outw, StringWriter err) MakeRunner(
-        IPhoScriptConverter converter, FakeModelManager models, bool quiet = false)
+        IPhoScriptConverter converter, bool quiet = false)
     {
         var outw = new StringWriter();
         var err = new StringWriter();
-        var runner = new CliRunner(converter, models, new NullProgressDisplay(), outw, err, quiet);
+        var runner = new CliRunner(converter, new NullProgressDisplay(), outw, err, quiet);
         return (runner, outw, err);
     }
 

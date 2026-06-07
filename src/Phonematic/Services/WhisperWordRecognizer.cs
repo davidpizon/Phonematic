@@ -11,21 +11,19 @@ namespace Phonematic.Services;
 /// </summary>
 public sealed class WhisperWordRecognizer : IWhisperWordRecognizer
 {
-    private readonly IModelManagerService _modelManager;
+    private readonly string _modelPath;
     private readonly int _threadCount;
-    private readonly string _modelSize;
     private readonly object _lock = new();
 
     private WhisperFactory? _factory;
     private WhisperProcessor? _processor;
 
-    /// <summary>Initialises the recognizer for a given Whisper model size (e.g. <c>"base"</c>, <c>"small"</c>).</summary>
-    public WhisperWordRecognizer(IModelManagerService modelManager, IConfigService config, string modelSize)
+    /// <summary>Initialises the recognizer with the path to a Whisper GGML model (e.g. extracted from a <c>.phonematic</c> bundle).</summary>
+    public WhisperWordRecognizer(string whisperModelPath, int threadCount)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(modelSize);
-        _modelManager = modelManager;
-        _modelSize = modelSize;
-        _threadCount = Math.Clamp(config.Load().ThreadCount, 1, 8);
+        ArgumentException.ThrowIfNullOrWhiteSpace(whisperModelPath);
+        _modelPath = whisperModelPath;
+        _threadCount = Math.Clamp(threadCount, 1, 8);
     }
 
     /// <inheritdoc/>
@@ -71,12 +69,11 @@ public sealed class WhisperWordRecognizer : IWhisperWordRecognizer
         {
             if (_processor is not null) return _processor;
 
-            var modelPath = _modelManager.GetWhisperModelPath(_modelSize);
-            if (!File.Exists(modelPath))
+            if (!File.Exists(_modelPath))
                 throw new FileNotFoundException(
-                    $"Whisper model '{_modelSize}' not found. Create it with `phonematic model create --whisper`.", modelPath);
+                    "Whisper model not found. Create a bundle with `phonematic model create --whisper`.", _modelPath);
 
-            _factory = WhisperFactory.FromPath(modelPath);
+            _factory = WhisperFactory.FromPath(_modelPath);
             _processor = _factory.CreateBuilder()
                 .WithLanguage("auto")
                 .WithThreads(_threadCount)

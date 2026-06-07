@@ -36,6 +36,9 @@ public sealed class AdapterTrainer : IAdapterTrainer
         IReadOnlyList<TrainingPairInput> pairs,
         string outputPath,
         BaseModelInfo baseModel,
+        string baseModelOnnxPath,
+        string? whisperModelPath,
+        string? whisperModelSize,
         int epochs = 50,
         IProgress<TrainingProgress>? progress = null,
         CancellationToken ct = default)
@@ -43,6 +46,7 @@ public sealed class AdapterTrainer : IAdapterTrainer
         ArgumentNullException.ThrowIfNull(baseModel);
         ArgumentNullException.ThrowIfNull(pairs);
         ArgumentException.ThrowIfNullOrWhiteSpace(outputPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(baseModelOnnxPath);
         if (pairs.Count == 0)
             throw new InvalidOperationException("No training pairs provided.");
         if (epochs < 1) epochs = 1;
@@ -131,7 +135,9 @@ public sealed class AdapterTrainer : IAdapterTrainer
             if (valPer < bestPer || epoch == 1)
             {
                 bestPer = valPer;
-                VoiceModelBundle.Save(outputPath, adapter, baseline, baseModel);
+                VoiceModelBundle.Save(
+                    outputPath, adapter, baseline, baseModel,
+                    baseModelOnnxPath, whisperModelPath, whisperModelSize, isTrained: true);
             }
 
             if (valPer <= EarlyStopPer) break;

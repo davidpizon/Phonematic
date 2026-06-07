@@ -5,19 +5,26 @@ namespace Phonematic.Tests.Cli;
 /// <summary>
 /// Argument parsing and binding via <see cref="CliCommandBuilder"/>: valid/invalid
 /// combinations, alias handling, and the built-in <c>--help</c>/<c>--version</c> directives.
+/// <para>
+/// Convert requires <c>--voice-model</c> (the self-contained bundle is the only model source), so
+/// most convert cases supply a dummy bundle path (parsing does not check file existence).
+/// </para>
 /// </summary>
 public class CliArgumentParsingTests
 {
-    /// <summary>Verifies that a single positional input argument parses without errors and applies option defaults.</summary>
+    private const string Bundle = "model.phonematic";
+
+    /// <summary>Verifies that input + the required <c>--voice-model</c> parse without errors and apply option defaults.</summary>
     [Fact]
-    public void Parse_InputOnly_NoErrors_DefaultsApplied()
+    public void Parse_InputAndVoiceModel_NoErrors_DefaultsApplied()
     {
         var builder = new CliCommandBuilder();
-        var parse = builder.RootCommand.Parse(["voice.mp3"]);
+        var parse = builder.RootCommand.Parse(["--voice-model", Bundle, "voice.mp3"]);
 
         Assert.Empty(parse.Errors);
         var options = builder.Bind(parse);
         Assert.Equal("voice.mp3", options.Input);
+        Assert.Equal(Bundle, options.VoiceModelPath);
         Assert.Null(options.Output);
         Assert.False(options.Recursive);
         Assert.False(options.Overwrite);
@@ -29,7 +36,8 @@ public class CliArgumentParsingTests
     public void Parse_AllShortFlags_AreBound()
     {
         var builder = new CliCommandBuilder();
-        var parse = builder.RootCommand.Parse(["-r", "-f", "-q", "-o", "out.phos", "in.mp3"]);
+        var parse = builder.RootCommand.Parse(
+            ["-r", "-f", "-q", "-o", "out.phos", "--voice-model", Bundle, "in.mp3"]);
 
         Assert.Empty(parse.Errors);
         var options = builder.Bind(parse);
@@ -45,7 +53,7 @@ public class CliArgumentParsingTests
     public void Parse_OutputDirAlias_BindsSameOption()
     {
         var builder = new CliCommandBuilder();
-        var parse = builder.RootCommand.Parse(["--output-dir", "results", "songs"]);
+        var parse = builder.RootCommand.Parse(["--output-dir", "results", "--voice-model", Bundle, "songs"]);
 
         Assert.Empty(parse.Errors);
         Assert.Equal("results", builder.Bind(parse).Output);
@@ -56,7 +64,8 @@ public class CliArgumentParsingTests
     public void Parse_LongOptionNames_AreBound()
     {
         var builder = new CliCommandBuilder();
-        var parse = builder.RootCommand.Parse(["--recursive", "--overwrite", "--output", "o.phos", "in.wav"]);
+        var parse = builder.RootCommand.Parse(
+            ["--recursive", "--overwrite", "--output", "o.phos", "--voice-model", Bundle, "in.wav"]);
 
         Assert.Empty(parse.Errors);
         var options = builder.Bind(parse);
@@ -70,7 +79,17 @@ public class CliArgumentParsingTests
     public void Parse_MissingRequiredInput_ProducesError()
     {
         var builder = new CliCommandBuilder();
-        var parse = builder.RootCommand.Parse([]);
+        var parse = builder.RootCommand.Parse(["--voice-model", Bundle]);
+
+        Assert.NotEmpty(parse.Errors);
+    }
+
+    /// <summary>Verifies that omitting the required <c>--voice-model</c> option produces a parse error.</summary>
+    [Fact]
+    public void Parse_MissingRequiredVoiceModel_ProducesError()
+    {
+        var builder = new CliCommandBuilder();
+        var parse = builder.RootCommand.Parse(["voice.mp3"]);
 
         Assert.NotEmpty(parse.Errors);
     }
@@ -80,12 +99,12 @@ public class CliArgumentParsingTests
     public void Parse_UnknownOption_ProducesError()
     {
         var builder = new CliCommandBuilder();
-        var parse = builder.RootCommand.Parse(["--bogus", "in.mp3"]);
+        var parse = builder.RootCommand.Parse(["--bogus", "--voice-model", Bundle, "in.mp3"]);
 
         Assert.NotEmpty(parse.Errors);
     }
 
-    /// <summary>Verifies that built-in help and version directives parse without errors even without the required input argument.</summary>
+    /// <summary>Verifies that built-in help and version directives parse without errors even without the required options.</summary>
     [Theory]
     [InlineData("--help")]
     [InlineData("-h")]
@@ -95,7 +114,7 @@ public class CliArgumentParsingTests
         var builder = new CliCommandBuilder();
         var parse = builder.RootCommand.Parse([directive]);
 
-        // Built-in help/version directives parse cleanly even without the input argument.
+        // Built-in help/version directives parse cleanly even without the required arguments/options.
         Assert.Empty(parse.Errors);
     }
 
@@ -103,21 +122,19 @@ public class CliArgumentParsingTests
     // Word-source / adaptation options
     // -------------------------------------------------------------------------
 
-    /// <summary>Verifies that transcript, voice-model, whisper, and whisper-model options bind correctly.</summary>
+    /// <summary>Verifies that transcript, voice-model, and whisper options bind correctly.</summary>
     [Fact]
     public void Parse_TranscriptVoiceModelWhisper_AreBound()
     {
         var builder = new CliCommandBuilder();
         var parse = builder.RootCommand.Parse(
-            ["--transcript", "words.txt", "--voice-model", "spk.phonematic",
-             "--whisper", "--whisper-model", "small", "in.wav"]);
+            ["--transcript", "words.txt", "--voice-model", "spk.phonematic", "--whisper", "in.wav"]);
 
         Assert.Empty(parse.Errors);
         var o = builder.Bind(parse);
         Assert.Equal("words.txt", o.TranscriptPath);
         Assert.Equal("spk.phonematic", o.VoiceModelPath);
         Assert.True(o.UseWhisper);
-        Assert.Equal("small", o.WhisperModel);
     }
 
     /// <summary>Verifies that the <c>-t</c> alias binds to the transcript path option.</summary>
@@ -125,7 +142,7 @@ public class CliArgumentParsingTests
     public void Parse_TranscriptShortAlias_IsBound()
     {
         var builder = new CliCommandBuilder();
-        var parse = builder.RootCommand.Parse(["-t", "w.txt", "in.wav"]);
+        var parse = builder.RootCommand.Parse(["-t", "w.txt", "--voice-model", Bundle, "in.wav"]);
 
         Assert.Empty(parse.Errors);
         Assert.Equal("w.txt", builder.Bind(parse).TranscriptPath);
@@ -136,10 +153,10 @@ public class CliArgumentParsingTests
     public void Parse_ConvertDefaults_NoWordSourceOptions()
     {
         var builder = new CliCommandBuilder();
-        var o = builder.Bind(builder.RootCommand.Parse(["in.wav"]));
+        var o = builder.Bind(builder.RootCommand.Parse(["--voice-model", Bundle, "in.wav"]));
 
         Assert.Null(o.TranscriptPath);
-        Assert.Null(o.VoiceModelPath);
+        Assert.Equal(Bundle, o.VoiceModelPath);
         Assert.False(o.UseWhisper);
     }
 
@@ -153,12 +170,13 @@ public class CliArgumentParsingTests
     {
         var builder = new CliCommandBuilder();
         var parse = builder.RootCommand.Parse(
-            ["train", "./pairs", "--output", "spk.phonematic", "--epochs", "10", "-r"]);
+            ["train", "./pairs", "--output", "spk.phonematic", "--base-model", "base.phonematic", "--epochs", "10", "-r"]);
 
         Assert.Empty(parse.Errors);
         var o = builder.BindTrain(parse);
         Assert.Equal("./pairs", o.PairsDir);
         Assert.Equal("spk.phonematic", o.Output);
+        Assert.Equal("base.phonematic", o.BaseModel);
         Assert.Equal(10, o.Epochs);
         Assert.True(o.Recursive);
     }
@@ -168,7 +186,8 @@ public class CliArgumentParsingTests
     public void Parse_TrainSubcommand_EpochsDefaultsTo50()
     {
         var builder = new CliCommandBuilder();
-        var parse = builder.RootCommand.Parse(["train", "./pairs", "-o", "spk.phonematic"]);
+        var parse = builder.RootCommand.Parse(
+            ["train", "./pairs", "-o", "spk.phonematic", "--base-model", "base.phonematic"]);
 
         Assert.Empty(parse.Errors);
         Assert.Equal(50, builder.BindTrain(parse).Epochs);
@@ -179,9 +198,19 @@ public class CliArgumentParsingTests
     public void Parse_TrainSubcommand_MissingRequiredOutput_Errors()
     {
         var builder = new CliCommandBuilder();
-        var parse = builder.RootCommand.Parse(["train", "./pairs"]);
+        var parse = builder.RootCommand.Parse(["train", "./pairs", "--base-model", "base.phonematic"]);
 
         Assert.NotEmpty(parse.Errors); // --output is required
+    }
+
+    /// <summary>Verifies that omitting the required <c>--base-model</c> option on the <c>train</c> subcommand produces an error.</summary>
+    [Fact]
+    public void Parse_TrainSubcommand_MissingRequiredBaseModel_Errors()
+    {
+        var builder = new CliCommandBuilder();
+        var parse = builder.RootCommand.Parse(["train", "./pairs", "--output", "spk.phonematic"]);
+
+        Assert.NotEmpty(parse.Errors); // --base-model is required
     }
 
     // -------------------------------------------------------------------------

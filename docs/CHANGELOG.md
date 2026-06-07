@@ -28,20 +28,21 @@ All notable changes to Phonematic are documented here.
 
 #### Model management, portable speaker-model bundles, all transcription logic in the CLI
 
-- **`model create` subcommand (explicit downloads + bundle creation).**
-  `phonematic model create --output <file> [--url] [--whisper] [--whisper-model]` is the single place
-  the CLI downloads models: it fetches the base model (and optionally Whisper) and writes a new,
-  untrained `.phonematic` bundle to the required `--output` path that records the base-model
-  identity. `convert`/`train` still exit `3` if a model is missing (never download as a side
-  effect).
-- **Configurable, named base models.** `AppConfig.Wav2Vec2ModelName`/`Wav2Vec2ModelUrl`;
-  `ModelManagerService` and `AcousticPhoneRecognizerService` accept a named/explicit base model
-  (`acoustic/<name>.onnx`), so different speakers can be trained/decoded against different bases.
-- **Self-contained `.phonematic` bundle (`VoiceModelBundle`).** The speaker model is now a ZIP
-  holding the adapter weights + a JSON manifest (speaker baseline + base-model identity + dims).
-  One file is the portable import/export unit; `train` writes it (`--base-model <name>` selects the
-  base, recorded in the manifest) and `convert --voice-model <bundle>` loads the recorded base
-  automatically. `AdapterTrainer` now also computes the speaker baseline during feature extraction.
+- **`model create` subcommand (the only downloader).**
+  `phonematic model create --output <file> [--url] [--whisper] [--whisper-model]` downloads the base
+  wav2vec2 model (and optionally Whisper) and **embeds the model bytes** into a new, untrained,
+  self-contained `.phonematic` bundle at the required `--output` path.
+- **The CLI is fully self-contained — no app config file, no model cache.** The CLI no longer uses
+  `ConfigService` or `ModelManagerService` (those remain for the GUI). Built-in `CliDefaults` replace
+  the `settings.json` values, a CLI-local `ModelDownloader` fetches models on demand, and every model
+  travels **inside** the `.phonematic` bundle. No fixed `%LOCALAPPDATA%` location is read or written.
+- **Self-contained `.phonematic` bundle (`VoiceModelBundle`, format v2).** The bundle is a ZIP holding
+  the adapter weights, the **embedded base ONNX**, an **optional embedded Whisper model**, and a JSON
+  manifest (speaker baseline + base-model identity + dims + Whisper size + an `IsTrained` flag).
+  `train <pairs> --base-model <bundle>` reads the embedded base and re-embeds it (and Whisper) into a
+  trained output; `convert --voice-model <bundle>` is **required** and supplies the base model,
+  applying the speaker adapter only when the bundle is trained. Models are extracted to ephemeral temp
+  files at run time. `AdapterTrainer` also computes the speaker baseline during feature extraction.
 - **All transcription logic moved into the CLI (`Phonematic`) project.** Relocated
   `TranscriptionService`/`ITranscriptionService` and `PhoScriptWriterLegacy` from `Phonematic.Gui`
   → `Phonematic` (GUI still consumes them via its project reference). **Deleted** the unused
@@ -54,7 +55,7 @@ All notable changes to Phonematic are documented here.
   constrains decoding to those words via a Viterbi CTC forced aligner (`CtcForcedAligner`) instead
   of free-guessing. The resulting `.phos` carries the real words in `<word orth>` with audio-derived
   timing. In directory mode, a sibling `<name>.txt` next to each audio file is used automatically.
-- **Whisper hybrid (`--whisper`, `--whisper-model <size>`).** For transcript-less audio, Whisper
+- **Whisper hybrid (`--whisper`).** For transcript-less audio, the bundle's embedded Whisper model
   supplies the words and sentence segmentation (one `<sentence>` per segment) while wav2vec2
   forced-aligns the phones within each word. New `WhisperWordRecognizer` (lean, DB-free) reuses the
   already-referenced `Whisper.net`.

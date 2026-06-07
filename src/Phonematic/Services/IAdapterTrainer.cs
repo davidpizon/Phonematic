@@ -22,12 +22,19 @@ public interface IAdapterTrainer
 {
     /// <summary>
     /// Trains an adapter from <paramref name="pairs"/> against <paramref name="baseModel"/> and saves
-    /// the best checkpoint as a self-contained <c>.phonematic</c> bundle at <paramref name="outputPath"/>.
+    /// the best checkpoint as a self-contained <c>.phonematic</c> bundle at <paramref name="outputPath"/>,
+    /// re-embedding the base ONNX (and Whisper model, if present) so the trained bundle is portable.
     /// </summary>
+    /// <param name="baseModelOnnxPath">Path to the base wav2vec2 ONNX (extracted from the input bundle) to embed in the output.</param>
+    /// <param name="whisperModelPath">Optional path to the Whisper GGML model to embed in the output.</param>
+    /// <param name="whisperModelSize">Whisper model size recorded in the manifest, or <see langword="null"/> if none.</param>
     Task<AdapterTrainingResult> TrainAsync(
         IReadOnlyList<TrainingPairInput> pairs,
         string outputPath,
         BaseModelInfo baseModel,
+        string baseModelOnnxPath,
+        string? whisperModelPath,
+        string? whisperModelSize,
         int epochs = 50,
         IProgress<TrainingProgress>? progress = null,
         CancellationToken ct = default);

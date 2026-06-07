@@ -394,22 +394,24 @@ the end-user command reference.
 
 | Type | Namespace | Role |
 |---|---|---|
-| `IWhisperWordRecognizer` / `WhisperWordRecognizer` | `Phonematic.Services` | `Task<IReadOnlyList<WhisperSegment>> RecognizeAsync(string wavPath, CancellationToken)`. Lean, DB-free Whisper word source for hybrid mode. `IDisposable`. |
+| `IWhisperWordRecognizer` / `WhisperWordRecognizer` | `Phonematic.Services` | `Task<IReadOnlyList<WhisperSegment>> RecognizeAsync(string wavPath, CancellationToken)`. Lean, DB-free Whisper word source for hybrid mode; constructed from a Whisper model path + thread count (`(string whisperModelPath, int threadCount)`). `IDisposable`. |
 | `IVoiceAdapter` / `VoiceAdapter` | `Phonematic.Services` | `float[,] ComputeLogits(float[,] hiddenStates)` — applies a trained adapter, re-deriving phone logits from frozen wav2vec2 hidden states. Loaded from a `.phonematic` bundle. `IDisposable`. |
-| `IAdapterTrainer` / `AdapterTrainer` | `Phonematic.Services` | `Task<AdapterTrainingResult> TrainAsync(IReadOnlyList<TrainingPairInput> pairs, string outputPath, BaseModelInfo baseModel, int epochs, IProgress<TrainingProgress>?, CancellationToken)`. DB-free CTC training; writes a `.phonematic` bundle. |
+| `IAdapterTrainer` / `AdapterTrainer` | `Phonematic.Services` | `Task<AdapterTrainingResult> TrainAsync(pairs, outputPath, BaseModelInfo baseModel, string baseModelOnnxPath, string? whisperModelPath, string? whisperModelSize, int epochs, IProgress<TrainingProgress>?, CancellationToken)`. DB-free CTC training; writes a self-contained `.phonematic` bundle that re-embeds the base ONNX (+ Whisper). |
 | `TrainingPairInput` / `AdapterTrainingResult` | `Phonematic.Services` | `record (string AudioPath, string TranscriptPath)` / `record (string ArtifactPath, double BestPhoneErrorRate)`. |
 | `AdapterModel` | `Phonematic.Services` | Shared adapter architecture constants: `HiddenDim = 768`, `AdapterDim = 256`, `PhoneVocabSize = 57`; builds the `Linear→ReLU→Dropout→Linear` `Sequential`. |
-| `VoiceModelBundle` | `Phonematic.Services` | Reads/writes the `.phonematic` ZIP (adapter weights + JSON manifest). `Save(path, adapter, baseline, baseModel)` / `LoadedVoiceModel Load(path)`. |
-| `BaseModelInfo` / `LoadedVoiceModel` | `Phonematic.Services` | `record (string Name, string Url, int VocabSize, int HiddenDim)` / loaded adapter + manifest metadata (`IDisposable`). |
+| `VoiceModelBundle` | `Phonematic.Services` | Reads/writes the self-contained `.phonematic` ZIP (adapter weights + **embedded base ONNX** + optional **embedded Whisper** + JSON manifest with a `IsTrained` flag). `Save(path, adapter, baseline, baseModel, baseModelOnnxPath, whisperModelPath?, whisperModelSize?, isTrained)`; `LoadedVoiceModel Load(path)` (adapter + manifest); `BundleModels ExtractModels(path)` (extracts embedded models to temp files). |
+| `BaseModelInfo` / `LoadedVoiceModel` / `BundleModels` | `Phonematic.Services` | `record (string Name, string Url, int VocabSize, int HiddenDim)` / loaded adapter + manifest metadata (`IDisposable`) / extracted embedded models: `BaseModelPath`, `WhisperModelPath?`, `WhisperModelSize?`, `IsTrained`, `BaseModel`, `Baseline` (`IDisposable` — deletes temp files). |
 
 ### CLI orchestration
 
 | Type | Namespace | Role |
 |---|---|---|
 | `IPhoScriptConverter` / `PhoScriptConverter` | `Phonematic.Cli` | `Task ConvertFileAsync(input, output, IProgress<double>?, CancellationToken, transcriptPath?, useWhisper)` — the unified per-file pipeline (transcript ▸ Whisper ▸ free decode, optional adapter). |
-| `CliRunner` | `Phonematic.Cli` | Orchestrates a `convert` invocation: validates input, checks models, resolves output paths, drives the per-file loop. Returns an `ExitCodes` value. |
-| `ModelRunner` | `Phonematic.Cli` | Orchestrates `model create` — the only place the CLI downloads models; writes an untrained `.phonematic` bundle. |
-| `TrainRunner` | `Phonematic.Cli` | Orchestrates `train`: pair discovery, readiness checks, per-epoch progress. |
+| `CliRunner` | `Phonematic.Cli` | Orchestrates a `convert` invocation: validates input, resolves output paths, drives the per-file loop. Returns an `ExitCodes` value. (Model availability is guaranteed by the caller via the bundle.) |
+| `IModelDownloader` / `ModelDownloader` | `Phonematic.Cli` | `DownloadToAsync(url, destPath, …)` / `DownloadWhisperToAsync(size, destPath, …)` — streams downloads to a caller-given path with retry. Used by `model create`; keeps the CLI independent of the GUI's `ModelManagerService`. |
+| `ModelRunner` | `Phonematic.Cli` | Orchestrates `model create` — the only place the CLI downloads; downloads the base (+ optional Whisper) and writes a self-contained untrained `.phonematic` bundle. |
+| `TrainRunner` | `Phonematic.Cli` | Orchestrates `train`: pair discovery, per-epoch progress; forwards the embedded base/Whisper paths to the trainer. |
+| `CliDefaults` | `Phonematic.Cli` | Built-in CLI defaults (base-model name/URL, Whisper size, thread count) that replace the GUI's `settings.json` values — the CLI reads no config file. |
 | `ExitCodes` | `Phonematic.Cli` | `Success = 0`, `RuntimeFailure = 1`, `UsageError = 2`, `EnvironmentError = 3`. |
 
 ---

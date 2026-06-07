@@ -115,27 +115,47 @@ Examples below use the `Phonematic` command; from source, substitute
 `dotnet run --project src/Phonematic/Phonematic.csproj -- <args>`. Result paths print to **stdout**;
 progress and logs go to **stderr**. Full flag/exit-code reference: [docs/CLI.md](docs/CLI.md).
 
+The CLI is **fully self-contained**: it reads no config file and uses no model cache. Every model it
+needs is embedded inside the `.phonematic` bundle you pass via `--voice-model` (created by
+`model create`).
+
+### Create a model (`model create`)
+
+The only command that downloads. It fetches the base wav2vec2 model (and, with `--whisper`, the
+Whisper model) and **embeds them** into a new, untrained `.phonematic` bundle at `--output`
+(required) — a self-contained scaffold to convert with or train from.
+
+```bash
+# Download the default base model and write a self-contained bundle
+Phonematic model create --output models/base.phonematic
+
+# Also embed a Whisper model for hybrid mode
+Phonematic model create --output models/base.phonematic --whisper --whisper-model small
+```
+
 ### Convert a single file
+
+`--voice-model <bundle>` is required — it supplies the (embedded) base model.
 
 ```bash
 # Default: writes song.phos next to the source
-Phonematic song.mp3
+Phonematic song.mp3 --voice-model models/base.phonematic
 
 # Explicit output path
-Phonematic song.mp3 -o transcripts/song.phos
+Phonematic song.mp3 --voice-model models/base.phonematic -o transcripts/song.phos
 ```
 
 ### Convert a folder
 
 ```bash
 # Every supported audio file in the folder (top level only), .phos next to each source
-Phonematic ./recordings
+Phonematic ./recordings --voice-model models/base.phonematic
 
 # Recurse into subfolders, mirror the tree into ./out, overwrite existing targets
-Phonematic ./recordings --recursive --output-dir ./out --overwrite
+Phonematic ./recordings --voice-model models/base.phonematic --recursive --output-dir ./out --overwrite
 
 # Quiet mode — capture just the written paths
-Phonematic ./recordings -q > written.txt
+Phonematic ./recordings --voice-model models/base.phonematic -q > written.txt
 ```
 
 ### Forced alignment with a known transcript
@@ -144,58 +164,33 @@ Supply the exact words spoken; the phones are aligned to them so `<word orth="�
 
 ```bash
 # Single file + its transcript
-Phonematic interview.mp3 --transcript interview.txt -o interview.phos
+Phonematic interview.mp3 --voice-model models/base.phonematic --transcript interview.txt -o interview.phos
 
 # Folder: each audio file is paired with its sibling <name>.txt automatically
-Phonematic ./recordings --recursive
+Phonematic ./recordings --voice-model models/base.phonematic --recursive
 ```
 
 ### Whisper hybrid (no transcript on hand)
 
-Whisper supplies the words; wav2vec2 forced-aligns the phones.
+The bundle's embedded Whisper model supplies the words; wav2vec2 forced-aligns the phones. Use a
+bundle created with `model create --whisper`.
 
 ```bash
-# Use the default (config) Whisper model size
-Phonematic lecture.mp3 --whisper
-
-# Pick a larger Whisper model for the whole folder
-Phonematic ./recordings --whisper --whisper-model small
-```
-
-### Apply a trained speaker model
-
-```bash
-# Improve recognition of a known speaker's new, transcript-less audio
-Phonematic new-recording.mp3 --voice-model models/speaker-A.phonematic -o out.phos
-
-# Batch a folder through the same speaker model
-Phonematic ./recordings -r --voice-model models/speaker-A.phonematic --output-dir ./out
+Phonematic lecture.mp3 --voice-model models/base-whisper.phonematic --whisper
+Phonematic ./recordings --voice-model models/base-whisper.phonematic --whisper
 ```
 
 ### Train a speaker model (`train`)
 
-Learns a portable `.phonematic` model from `(audio, sibling-<name>.txt)` pairs.
+Learns a portable, self-contained `.phonematic` model from `(audio, sibling-<name>.txt)` pairs. The
+`--base-model` bundle (from `model create`) supplies the base model and is re-embedded into the output.
 
 ```bash
 # Train from a folder of recordings + matching transcripts
-Phonematic train ./speaker-A --output models/speaker-A.phonematic --recursive
+Phonematic train ./speaker-A --base-model models/base.phonematic --output models/speaker-A.phonematic --recursive
 
-# Different speaker, more epochs, an explicitly chosen base model
-Phonematic train ./speaker-B -o models/speaker-B.phonematic --epochs 80 --base-model wav2vec2-phoneme
-```
-
-### Create a model (`model create`)
-
-The only command that downloads. Conversion/training otherwise exit `3` if a model is missing.
-It downloads the base model and writes a new, untrained `.phonematic` bundle (a scaffold to be
-trained later) to `--output` (required).
-
-```bash
-# Download the default base model and write the bundle
-Phonematic model create --output models/spk.phonematic
-
-# Also download a Whisper model for hybrid mode
-Phonematic model create --output models/spk.phonematic --whisper --whisper-model small
+# Apply the trained bundle to new, transcript-less audio
+Phonematic new-recording.mp3 --voice-model models/speaker-A.phonematic -o out.phos
 ```
 
 ## Architecture

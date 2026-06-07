@@ -15,8 +15,8 @@ public sealed record TrainOptions
     /// <summary>Number of training epochs.</summary>
     public int Epochs { get; init; } = 50;
 
-    /// <summary>Base-model name to train against (default: app config). Recorded in the output bundle.</summary>
-    public string? BaseModel { get; init; }
+    /// <summary>Path to the base <c>.phonematic</c> bundle to train against (required). Its embedded base model is used and re-embedded into the output.</summary>
+    public required string BaseModel { get; init; }
 
     /// <summary>Recurse into subdirectories when discovering training pairs.</summary>
     public bool Recursive { get; init; }
