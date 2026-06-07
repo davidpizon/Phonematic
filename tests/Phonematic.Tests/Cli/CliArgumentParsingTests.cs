@@ -214,16 +214,16 @@ public class CliArgumentParsingTests
     }
 
     // -------------------------------------------------------------------------
-    // model create subcommand
+    // model-create subcommand
     // -------------------------------------------------------------------------
 
-    /// <summary>Verifies that the <c>model create</c> subcommand binds all of its options correctly.</summary>
+    /// <summary>Verifies that the <c>model-create</c> subcommand binds all of its options correctly.</summary>
     [Fact]
     public void Parse_ModelCreateSubcommand_BindsOptions()
     {
         var builder = new CliCommandBuilder();
         var parse = builder.RootCommand.Parse(
-            ["model", "create", "--output", "x.phonematic", "--url", "https://example/model.onnx",
+            ["model-create", "--output", "x.phonematic", "--url", "https://example/model.onnx",
              "--whisper", "--whisper-model", "small", "-q"]);
 
         Assert.Empty(parse.Errors);
@@ -235,23 +235,23 @@ public class CliArgumentParsingTests
         Assert.True(o.Quiet);
     }
 
-    /// <summary>Verifies that the <c>-o</c> alias binds to the output option on <c>model create</c>.</summary>
+    /// <summary>Verifies that the <c>-o</c> alias binds to the output option on <c>model-create</c>.</summary>
     [Fact]
     public void Parse_ModelCreateSubcommand_OutputShortAlias_IsBound()
     {
         var builder = new CliCommandBuilder();
-        var parse = builder.RootCommand.Parse(["model", "create", "-o", "spk.phonematic"]);
+        var parse = builder.RootCommand.Parse(["model-create", "-o", "spk.phonematic"]);
 
         Assert.Empty(parse.Errors);
         Assert.Equal("spk.phonematic", builder.BindModelCreate(parse).Output);
     }
 
-    /// <summary>Verifies that omitting the required <c>--output</c> option on <c>model create</c> produces a parse error.</summary>
+    /// <summary>Verifies that omitting the required <c>--output</c> option on <c>model-create</c> produces a parse error.</summary>
     [Fact]
     public void Parse_ModelCreateSubcommand_MissingRequiredOutput_Errors()
     {
         var builder = new CliCommandBuilder();
-        var parse = builder.RootCommand.Parse(["model", "create"]);
+        var parse = builder.RootCommand.Parse(["model-create"]);
 
         Assert.NotEmpty(parse.Errors); // --output is required
     }

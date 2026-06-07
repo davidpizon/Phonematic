@@ -71,7 +71,7 @@ public sealed class WhisperWordRecognizer : IWhisperWordRecognizer
 
             if (!File.Exists(_modelPath))
                 throw new FileNotFoundException(
-                    "Whisper model not found. Create a bundle with `phonematic model create --whisper`.", _modelPath);
+                    "Whisper model not found. Create a bundle with `phonematic model-create --whisper`.", _modelPath);
 
             _factory = WhisperFactory.FromPath(_modelPath);
             _processor = _factory.CreateBuilder()

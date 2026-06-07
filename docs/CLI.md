@@ -6,7 +6,7 @@ prosodic features). It is designed to be reliable to invoke from automated agent
 
 The CLI is a **stateless, self-contained file→file converter**: it reads and writes **no app config
 file** and uses **no fixed model cache**. Every model it needs is **embedded inside the
-`.phonematic` bundle** you pass on the command line (created by `model create`); at run time the
+`.phonematic` bundle** you pass on the command line (created by `model-create`); at run time the
 embedded models are extracted to ephemeral temp files. It does not write to the SQLite database and
 does not compute or store embeddings. Deduplication is by output-file existence only.
 
@@ -23,7 +23,7 @@ dotnet run --project src/Phonematic/Phonematic.csproj -- <input> --voice-model <
 ```
 
 `<input>` is a path to a supported audio file **or** a directory of audio files. `--voice-model` is
-a required path to a `.phonematic` bundle (see `model create` below).
+a required path to a `.phonematic` bundle (see `model-create` below).
 
 Supported audio extensions: `.mp3 .wav .aiff .aif .wma .m4a .ogg .flac .voc`
 
@@ -32,14 +32,14 @@ Supported audio extensions: `.mp3 .wav .aiff .aif .wma .m4a .ogg .flac .voc`
 | Flag | Applies to | Description |
 |---|---|---|
 | `<input>` | both | **(required)** Audio file or directory to convert. |
-| `--voice-model <bundle>` | both | **(required)** Path to a `.phonematic` bundle. Supplies the embedded base wav2vec2 model; if the bundle is **trained**, its speaker-adaptation head is also applied. An untrained bundle (straight from `model create`) free-decodes with the base model alone. |
+| `--voice-model <bundle>` | both | **(required)** Path to a `.phonematic` bundle. Supplies the embedded base wav2vec2 model; if the bundle is **trained**, its speaker-adaptation head is also applied. An untrained bundle (straight from `model-create`) free-decodes with the base model alone. |
 | `-o, --output <file>` | single-file | Output `.phos` file path. Default: same directory and base name as the input, with a `.phos` extension. |
 | `--output-dir <dir>` | directory | Output directory. Default: write each `.phos` next to its source. (Alias of `-o`/`--output`; the meaning is chosen by whether `<input>` is a file or a directory.) |
 | `-r, --recursive` | directory | Recurse into subdirectories. Default: top-level only. With `--output-dir`, the source's relative subfolder structure is mirrored under `<dir>`. |
 | `-f, --overwrite` | both | Overwrite existing `.phos` targets. Default: skip existing targets with a warning. |
 | `-q, --quiet` | both | Suppress the progress bar and informational output; warnings and errors (and stdout result lines) still print. |
 | `-t, --transcript <file>` | single-file | Path to a text file with the **exact words spoken**. The phones are forced-aligned to those words, so the output `orth` matches the transcript exactly. In directory mode, per-file sibling `<name>.txt` files are used instead of this flag. |
-| `--whisper` | both | For files **without** a transcript, use the bundle's **embedded** Whisper model to supply the words (hybrid mode); wav2vec2 then forced-aligns the phones. Requires a bundle created with `model create --whisper`. |
+| `--whisper` | both | For files **without** a transcript, use the bundle's **embedded** Whisper model to supply the words (hybrid mode); wav2vec2 then forced-aligns the phones. Requires a bundle created with `model-create --whisper`. |
 | `-h, --help` | both | Show help and exit. |
 | `--version` | both | Show version and exit. |
 
@@ -59,7 +59,7 @@ output reflect the actual words spoken; precedence is **transcript ▸ Whisper �
   then populated from Whisper (as good as Whisper's transcription).
 - **A trained bundle** — when `--voice-model` points at a bundle produced by `train`, its speaker
   adapter improves the raw phones. Composes with the above (it improves the logits that feed either
-  path). An untrained `model create` bundle skips this step.
+  path). An untrained `model-create` bundle skips this step.
 
 Per-`<phon>` IPA is the canonical dictionary pronunciation aligned in time (as with Montreal Forced
 Aligner / Gentle), not a transcription of every realised allophone.
@@ -97,20 +97,20 @@ The CLI never downloads as a side effect and never reads a config file or a shar
 Everything it needs is **inside the `.phonematic` bundle**:
 
 - the base wav2vec2 phoneme **ONNX** (always),
-- the speaker **adapter** (untrained for a fresh `model create` bundle; trained after `train`),
+- the speaker **adapter** (untrained for a fresh `model-create` bundle; trained after `train`),
 - optionally the **Whisper GGML** model (when the bundle was created with `--whisper`),
 - a manifest (base-model identity, dimensions, speaker baseline, and a *trained* flag).
 
-`model create` is the **only** command that downloads. `convert` and `train` consume a bundle and
+`model-create` is the **only** command that downloads. `convert` and `train` consume a bundle and
 extract its embedded models to temp files for the duration of the run.
 
-## Creating a model (`model create`)
+## Creating a model (`model-create`)
 
 ```
-Phonematic model create --output <file> [--url <url>] [--whisper] [--whisper-model <size>] [--quiet]
+Phonematic model-create --output <file> [--url <url>] [--whisper] [--whisper-model <size>] [--quiet]
 ```
 
-`model create` downloads the base wav2vec2 model (from a built-in default URL, or `--url`) and,
+`model-create` downloads the base wav2vec2 model (from a built-in default URL, or `--url`) and,
 with `--whisper`, the Whisper GGML model, then **embeds the model bytes** into a new, **untrained**
 `.phonematic` bundle written to `--output` (required). The bundle is a portable, self-contained
 scaffold: it can be used directly with `--voice-model` (free decode, no speaker adaptation), or
@@ -118,9 +118,9 @@ passed to `train` to produce a *trained* bundle. The created bundle path prints 
 progress prints to stderr.
 
 ```bash
-Phonematic model create --output models/base.phonematic                      # default base model
-Phonematic model create --output models/fr.phonematic --url https://…/fr-phone.onnx   # a different base model URL
-Phonematic model create --output models/base.phonematic --whisper --whisper-model small   # also embed a Whisper model
+Phonematic model-create --output models/base.phonematic                      # default base model
+Phonematic model-create --output models/fr.phonematic --url https://…/fr-phone.onnx   # a different base model URL
+Phonematic model-create --output models/base.phonematic --whisper --whisper-model small   # also embed a Whisper model
 ```
 
 ## Training a voice model (`train`)
@@ -134,7 +134,7 @@ Phonematic train <pairs-dir> --base-model <base.phonematic> --output <model.phon
 
 Training pairs are discovered as audio files under `<pairs-dir>` that each have a sibling
 `<name>.txt` transcript (the same convention as directory-mode forced alignment). `--base-model`
-(required) is the path to a `.phonematic` bundle created by `model create`; its embedded base model
+(required) is the path to a `.phonematic` bundle created by `model-create`; its embedded base model
 is used for training and **re-embedded** into the output so the trained bundle stays self-contained
 (the Whisper model, if present, is carried over too). The trained model path is written to stdout;
 per-epoch progress (loss, validation phone-error-rate) goes to stderr.
@@ -146,7 +146,7 @@ at conversion time travels inside the file.
 
 ```bash
 # 1. Create a base bundle once (downloads + embeds the base model)
-Phonematic model create --output ./models/base.phonematic
+Phonematic model-create --output ./models/base.phonematic
 
 # 2. Train from a folder of recordings, each with a matching .txt
 Phonematic train ./speaker-A --base-model ./models/base.phonematic --output ./models/speaker-A.phonematic --recursive

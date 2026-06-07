@@ -3,7 +3,7 @@ using Whisper.net.Ggml;
 namespace Phonematic.Cli;
 
 /// <summary>
-/// Downloads model files to a caller-specified path. Used by <c>model create</c> to fetch the base
+/// Downloads model files to a caller-specified path. Used by <c>model-create</c> to fetch the base
 /// wav2vec2 ONNX and the optional Whisper GGML into temp files for embedding into a <c>.phonematic</c>
 /// bundle. The CLI owns its own downloader so it depends on no app config or fixed model cache.
 /// </summary>

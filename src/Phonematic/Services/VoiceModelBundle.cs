@@ -40,7 +40,7 @@ public sealed class BundleModels : IDisposable
     /// <summary>Speaker baseline recorded in the manifest.</summary>
     public required SpeakerBaseline Baseline { get; init; }
 
-    /// <summary>Whether the bundle's adapter has been trained (vs. a fresh scaffold from <c>model create</c>).</summary>
+    /// <summary>Whether the bundle's adapter has been trained (vs. a fresh scaffold from <c>model-create</c>).</summary>
     public bool IsTrained { get; init; }
 
     /// <summary>Deletes the extracted temp files (best-effort).</summary>
@@ -149,7 +149,7 @@ public static class VoiceModelBundle
 
         var baseEntry = zip.GetEntry(BaseModelEntry)
             ?? throw new InvalidDataException(
-                $"{path}: bundle has no embedded base model. Re-create it with `phonematic model create`.");
+                $"{path}: bundle has no embedded base model. Re-create it with `phonematic model-create`.");
         var basePath = Path.Combine(Path.GetTempPath(), $"phonematic-base-{Guid.NewGuid():N}.onnx");
         baseEntry.ExtractToFile(basePath, overwrite: true);
 

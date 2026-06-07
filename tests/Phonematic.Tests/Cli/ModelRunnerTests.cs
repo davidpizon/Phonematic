@@ -19,7 +19,7 @@ public sealed class ModelRunnerTests : IDisposable
         try { File.Delete(_output); } catch { /* best-effort */ }
     }
 
-    /// <summary>Verifies that <c>model create</c> writes a loadable, untrained bundle that embeds the base ONNX.</summary>
+    /// <summary>Verifies that <c>model-create</c> writes a loadable, untrained bundle that embeds the base ONNX.</summary>
     [Fact]
     public async Task CreateAsync_WritesSelfContainedUntrainedBundle()
     {

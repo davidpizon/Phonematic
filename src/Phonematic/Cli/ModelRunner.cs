@@ -3,7 +3,7 @@ using Phonematic.Services;
 
 namespace Phonematic.Cli;
 
-/// <summary>Options for <c>model create</c>.</summary>
+/// <summary>Options for <c>model-create</c>.</summary>
 public sealed record ModelCreateOptions
 {
     /// <summary>Output <c>.phonematic</c> bundle path (required).</summary>
@@ -23,7 +23,7 @@ public sealed record ModelCreateOptions
 }
 
 /// <summary>
-/// Orchestrates the <c>model create</c> subcommand: downloads the base wav2vec2 ONNX (and optionally
+/// Orchestrates the <c>model-create</c> subcommand: downloads the base wav2vec2 ONNX (and optionally
 /// the Whisper GGML) and writes a new, untrained, <b>self-contained</b> <c>.phonematic</c> bundle
 /// that embeds those model bytes. The CLI uses no app config and no fixed model cache — downloads go
 /// to temp files that are embedded into the bundle and then deleted.

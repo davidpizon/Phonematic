@@ -63,7 +63,7 @@ internal static class Program
             {
                 await Console.Error.WriteLineAsync(
                     "error: --whisper was requested but the bundle has no embedded Whisper model. " +
-                    "Re-create it with `phonematic model create --whisper`.");
+                    "Re-create it with `phonematic model-create --whisper`.");
                 return ExitCodes.EnvironmentError;
             }
 
@@ -76,7 +76,7 @@ internal static class Program
                 : null;
 
             // Apply the speaker adapter only when the bundle is trained; an untrained scaffold
-            // (from `model create`) free-decodes with the base model alone.
+            // (from `model-create`) free-decodes with the base model alone.
             using var voiceAdapter = bundle.IsTrained ? new VoiceAdapter(options.VoiceModelPath!) : null;
 
             IPhoScriptConverter converter = new PhoScriptConverter(
@@ -129,7 +129,7 @@ internal static class Program
         }
     }
 
-    /// <summary>Handles the <c>model create</c> subcommand: downloads the base model (and optional Whisper) and writes a self-contained untrained <c>.phonematic</c> bundle.</summary>
+    /// <summary>Handles the <c>model-create</c> subcommand: downloads the base model (and optional Whisper) and writes a self-contained untrained <c>.phonematic</c> bundle.</summary>
     private static async Task<int> RunModelCreateAsync(ModelCreateOptions options, CancellationToken ct)
     {
         using var downloader = new ModelDownloader();

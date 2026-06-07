@@ -44,10 +44,8 @@ internal sealed class CliCommandBuilder
     /// <summary>Option that suppresses per-epoch progress output during training.</summary>
     public Option<bool> TrainQuietOption { get; }
 
-    // `model` subcommand
-    /// <summary>The <c>model</c> subcommand.</summary>
-    public Command ModelCommand { get; }
-    /// <summary>The <c>model create</c> subcommand.</summary>
+    // `model-create` subcommand
+    /// <summary>The <c>model-create</c> subcommand.</summary>
     public Command ModelCreateCommand { get; }
     /// <summary>Option for the output <c>.phonematic</c> bundle path (required).</summary>
     public Option<string> CreateOutputOption { get; }
@@ -138,7 +136,7 @@ internal sealed class CliCommandBuilder
         };
         TrainBaseModelOption = new Option<string>("--base-model")
         {
-            Description = "Path to the base .phonematic bundle to train against (create one with `model create`).",
+            Description = "Path to the base .phonematic bundle to train against (create one with `model-create`).",
             Required = true,
         };
         TrainRecursiveOption = new Option<bool>("--recursive", "-r")
@@ -162,7 +160,7 @@ internal sealed class CliCommandBuilder
         };
         RootCommand.Subcommands.Add(TrainCommand);
 
-        // ---- model subcommand: phonematic model create ----
+        // ---- model-create subcommand: phonematic model-create ----
         CreateOutputOption = new Option<string>("--output", "-o")
         {
             Description = "Output .phonematic file path.",
@@ -186,15 +184,11 @@ internal sealed class CliCommandBuilder
         };
 
         ModelCreateCommand = new Command(
-            "create", "Create a .phonematic bundle (downloads the base model, and optionally Whisper).")
+            "model-create", "Create a .phonematic bundle (downloads the base model, and optionally Whisper).")
         {
             CreateOutputOption, CreateUrlOption, CreateWhisperOption, CreateWhisperModelOption, CreateQuietOption,
         };
-        ModelCommand = new Command("model", "Create voice-model bundles.")
-        {
-            ModelCreateCommand,
-        };
-        RootCommand.Subcommands.Add(ModelCommand);
+        RootCommand.Subcommands.Add(ModelCreateCommand);
 
         // Default no-op action so the root parses without requiring a subcommand (the convert path).
         // Program overrides this via SetHandler; tests parse without setting a handler.
@@ -243,7 +237,7 @@ internal sealed class CliCommandBuilder
         Quiet = parseResult.GetValue(CreateQuietOption),
     };
 
-    /// <summary>Wires the <c>model create</c> subcommand action.</summary>
+    /// <summary>Wires the <c>model-create</c> subcommand action.</summary>
     public void SetModelHandler(Func<ModelCreateOptions, CancellationToken, Task<int>> create)
         => ModelCreateCommand.SetAction((parseResult, ct) => create(BindModelCreate(parseResult), ct));
 }
